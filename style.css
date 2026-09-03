@@ -1,94 +1,211 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  background: #000000;
+  color: #f4f2f8;
+}
+
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  margin: 0;
+  min-height: 100vh;
   background: #000000;
-  color: #e0e0e0;
-  overflow: hidden;
-  height: 100vh;
-  display: flex;
+}
+
+#app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
 }
 
 #canvas-container {
-  flex: 1;
+  min-height: 100vh;
   position: relative;
+  overflow: hidden;
+  touch-action: none;
+}
+
+#canvas-container canvas {
+  display: block;
 }
 
 #controls {
-  width: 280px;
-  background: #0a0a0a;
-  border-left: 1px solid #222;
-  padding: 16px;
+  min-height: 100vh;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  padding: 20px 16px 36px;
+  background: #09090b;
+  border-left: 1px solid #25252b;
+}
+
+header {
+  margin-bottom: 18px;
+}
+
+.eyebrow {
+  margin: 0 0 5px;
+  color: #9f8bff;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  font-weight: 700;
 }
 
 h1 {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: #f0f0f0;
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.03em;
 }
 
-.control-group {
+h2 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.intro {
+  margin: 6px 0 0;
+  color: #9997a1;
+  font-size: 12px;
+}
+
+.control-section {
+  padding: 14px 0 16px;
+  border-top: 1px solid #24242a;
+}
+
+.field {
+  margin: 0 0 11px;
+}
+
+.field label,
+.range-label,
+.select-row label,
+.color-row label {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  color: #c7c5ce;
+  font-size: 11px;
+}
+
+.field output,
+.range-label output {
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+
+.range-label span {
+  color: #777580;
+}
+
+input[type="range"] {
+  width: 100%;
+  margin-top: 5px;
+  accent-color: #a58cff;
+}
+
+.select-row,
+.color-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.select-row.two-selects {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.select-row label {
+  display: grid;
+  align-items: start;
   gap: 4px;
 }
 
-.control-group label {
-  font-size: 12px;
-  color: #aaa;
+.select-row select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 4px;
+  border: 1px solid #33333c;
+  border-radius: 5px;
+  background: #15151a;
+  color: #e9e7ef;
+  font-size: 11px;
 }
 
-.control-group input[type="range"] {
-  width: 100%;
+.color-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.control-group input[type="color"] {
+.color-row.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.color-row label {
+  display: grid;
+  align-items: start;
+  gap: 4px;
+}
+
+input[type="color"] {
   width: 100%;
-  height: 32px;
-  border: none;
+  height: 31px;
+  padding: 2px;
+  border: 1px solid #34343d;
+  border-radius: 5px;
   background: transparent;
 }
 
-.button-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+.button-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  margin-top: 12px;
 }
 
-.button-row button {
-  flex: 1 1 40%;
-  padding: 6px 8px;
-  background: #1a1a1a;
-  color: #e0e0e0;
-  border: 1px solid #333;
-  border-radius: 4px;
+.button-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+button {
+  appearance: none;
+  padding: 8px 9px;
+  border: 1px solid #3a3944;
+  border-radius: 6px;
+  background: #18171d;
+  color: #f6f4fb;
+  font: inherit;
+  font-size: 12px;
   cursor: pointer;
-  font-size: 12px;
 }
 
-.button-row button:hover {
-  background: #222;
+button:hover {
+  border-color: #615882;
+  background: #25232c;
 }
 
-.time-display {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #ccc;
-  text-align: center;
+button:active {
+  transform: translateY(1px);
 }
 
-#dayValue,
-#totalDays {
-  color: #fff;
-  font-weight: 600;
+@media (max-width: 780px) {
+  #app {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #canvas-container {
+    min-height: 58vh;
+    height: 58vh;
+  }
+
+  #controls {
+    min-height: auto;
+    border-top: 1px solid #25252b;
+    border-left: 0;
+  }
 }
