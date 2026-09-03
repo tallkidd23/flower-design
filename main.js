@@ -1249,3 +1249,7 @@ window.addEventListener(
 );
 
 resizeRenderer();
+
+rebuildFlower();
+
+requestAnimationFrame(animate);
