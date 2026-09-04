@@ -5,24 +5,53 @@ const $ = (id) => document.getElementById(id);
 
 const container = $("canvas-container");
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000000);
+scene.background = new THREE.Color(0x020204);
 
-const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-camera.position.set(0, 2.4, 6.6);
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+// Spherical Orbit Camera Setup (Horizontal Yaw + Vertical Pitch + Zoom)
+let cameraRadius = 6.4;
+let cameraPitch = 0.35; // Vertical tilt angle (radians above ground)
+let cameraYaw = 0;      // Horizontal rotation
+let targetLookY = 2.0;
+
+function updateCameraPosition() {
+  const horizontalDist = cameraRadius * Math.cos(cameraPitch);
+  camera.position.x = horizontalDist * Math.sin(cameraYaw);
+  camera.position.z = horizontalDist * Math.cos(cameraYaw);
+  camera.position.y = targetLookY + cameraRadius * Math.sin(cameraPitch);
+  camera.lookAt(0, targetLookY, 0);
+}
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.5));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 container.appendChild(renderer.domElement);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.82));
-const keyLight = new THREE.DirectionalLight(0xffffff, 1.25);
-keyLight.position.set(3.5, 5.5, 4.5);
+// Enhanced Lighting for Botanical Depth
+scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
+keyLight.position.set(4.5, 7.5, 4.5);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.width = 1024;
+keyLight.shadow.mapSize.height = 1024;
+keyLight.shadow.bias = -0.0005;
 scene.add(keyLight);
-const rimLight = new THREE.DirectionalLight(0x9d7cff, 0.7);
-rimLight.position.set(-4, 2.5, -4);
+
+const rimLight = new THREE.DirectionalLight(0x9d7cff, 0.85);
+rimLight.position.set(-5, 4, -4.5);
 scene.add(rimLight);
 
+const fillLight = new THREE.DirectionalLight(0x6ee7b7, 0.4);
+fillLight.position.set(0, -3, 3);
+scene.add(fillLight);
+
+// Flower Group
 const flower = new THREE.Group();
 scene.add(flower);
 
@@ -31,10 +60,12 @@ let day = 0;
 let playing = false;
 let lastTime = performance.now();
 let flowerMeshes = [];
-let yaw = 0;
+
 let dragging = false;
 let dragStartX = 0;
-let dragStartYaw = 0;
+let dragStartY = 0;
+let startYaw = 0;
+let startPitch = 0;
 
 const ids = [
   "petalCount", "petalLength", "petalWidth", "petalCurl", "bloomOpenness",
@@ -102,6 +133,8 @@ function stage(dayValue, start, end) {
 }
 
 function add(mesh) {
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
   flowerMeshes.push(mesh);
   flower.add(mesh);
   return mesh;
@@ -118,7 +151,13 @@ function clearFlower() {
 }
 
 function createMaterial(color, options = {}) {
-  return new THREE.MeshStandardMaterial({ color, roughness: 0.52, metalness: 0.04, side: THREE.DoubleSide, ...options });
+  return new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.38,
+    metalness: 0.05,
+    side: THREE.DoubleSide,
+    ...options,
+  });
 }
 
 function makeRibbonGeometry(points, widths) {
@@ -153,19 +192,15 @@ function buildStem(params, grown) {
   const height = Math.max(0.025, params.stemHeight * grown);
   const w = (typeof params.stemWidth === "number" && !isNaN(params.stemWidth)) ? params.stemWidth : 0.35;
   
-  // Direct dramatic dynamic range: 0.1 gives 0.02, 1.0 gives 0.35 top / 0.60 bottom
   const topRadius = 0.02 + (w - 0.1) * 0.35;
   const bottomRadius = 0.04 + (w - 0.1) * 0.60;
 
-  const geometry = new THREE.CylinderGeometry(topRadius, bottomRadius, height, 18);
-  const stem = new THREE.Mesh(geometry, createMaterial(params.stemColor, { roughness: 0.84 }));
+  const geometry = new THREE.CylinderGeometry(topRadius, bottomRadius, height, 24);
+  const stem = new THREE.Mesh(geometry, createMaterial(params.stemColor, { roughness: 0.72 }));
   stem.position.y = height / 2;
   add(stem);
   
-  // Build thorns on stem
   if (params.thornPresence === "true") buildThorns(params, stem.position.y, height, topRadius);
-  
-  // Build trichomes
   if (params.trichomeDensity > 0.05) buildTrichomes(params, stem.position.y, height, topRadius);
 }
 
@@ -177,8 +212,8 @@ function buildThorns(params, startY, stemHeight, stemRadius) {
     const angle = (i / thornCount) * Math.PI * 2 + (i * 0.4);
     const y = startY + (Math.random() - 0.5) * stemHeight * 0.75;
     
-    const thornGeo = new THREE.ConeGeometry(0.02, thornLength, 8);
-    const thorn = new THREE.Mesh(thornGeo, createMaterial(params.thornColor, { roughness: 0.6 }));
+    const thornGeo = new THREE.ConeGeometry(0.025, thornLength, 10);
+    const thorn = new THREE.Mesh(thornGeo, createMaterial(params.thornColor, { roughness: 0.5 }));
     
     thorn.position.set(Math.cos(angle) * (stemRadius + 0.02), y, Math.sin(angle) * (stemRadius + 0.02));
     thorn.rotation.x = Math.PI / 2 - 0.25;
@@ -192,13 +227,13 @@ function buildThorns(params, startY, stemHeight, stemRadius) {
 }
 
 function buildTrichomes(params, startY, stemHeight, stemRadius) {
-  const trichomeCount = Math.round(params.trichomeDensity * 24);
+  const trichomeCount = Math.round(params.trichomeDensity * 30);
   
   for (let i = 0; i < trichomeCount; i++) {
     const angle = Math.random() * Math.PI * 2;
     const y = startY + (Math.random() - 0.5) * stemHeight * 0.9;
     
-    const hairGeo = new THREE.CylinderGeometry(0.003, 0.005, 0.09, 6);
+    const hairGeo = new THREE.CylinderGeometry(0.003, 0.005, 0.1, 6);
     const hair = new THREE.Mesh(hairGeo, createMaterial(params.stemColor, { roughness: 0.9, transparent: true, opacity: 0.75 }));
     
     hair.position.set(Math.cos(angle) * (stemRadius + 0.01), y, Math.sin(angle) * (stemRadius + 0.01));
@@ -223,8 +258,8 @@ function buildLeaves(params, grown) {
     const direction = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
     const sideDirection = new THREE.Vector3(-Math.sin(angle), 0, Math.cos(angle));
 
-    for (let s = 0; s <= 20; s++) {
-      const t = s / 20;
+    for (let s = 0; s <= 24; s++) {
+      const t = s / 24;
       const wobble = params.leafEdge === "jagged" ? Math.sin(t * Math.PI * 10 + i) * 0.045 * length : 0;
       const point = direction.clone().multiplyScalar(length * t + wobble);
       point.add(sideDirection.clone().multiplyScalar(Math.sin(t * Math.PI * 2) * 0.025 * length));
@@ -238,52 +273,15 @@ function buildLeaves(params, grown) {
       return width * Math.sin(t * Math.PI) * serration;
     });
 
-    const leaf = new THREE.Mesh(makeRibbonGeometry(points, widths), createMaterial(params.leafColor, { roughness: 0.7 }));
+    const leaf = new THREE.Mesh(makeRibbonGeometry(points, widths), createMaterial(params.leafColor, { roughness: 0.55 }));
     add(leaf);
 
     if (params.leafPattern === "variegated") {
       const stripePoints = points.map((p) => p.clone().add(new THREE.Vector3(0, 0.003, 0)));
       const stripeWidths = widths.map((w) => w * 0.3);
-      const stripe = new THREE.Mesh(makeRibbonGeometry(stripePoints, stripeWidths), createMaterial(params.variegationColor, { roughness: 0.62 }));
+      const stripe = new THREE.Mesh(makeRibbonGeometry(stripePoints, stripeWidths), createMaterial(params.variegationColor, { roughness: 0.5 }));
       add(stripe);
     }
-    
-    // Thorns on leaf edges
-    if (params.thornPresence === "true" && params.leafEdge === "jagged") {
-      buildLeafThorns(params, points, widths);
-    }
-    
-    // Trichomes on leaf surface
-    if (params.trichomeDensity > 0.1) {
-      buildLeafTrichomes(params, points);
-    }
-  }
-}
-
-function buildLeafThorns(params, points, widths) {
-  const thornCount = Math.min(3, Math.round(params.thornDensity * 5));
-  for (let i = 0; i < thornCount; i++) {
-    const idx = Math.floor((i + 1) * points.length / (thornCount + 1));
-    if (idx >= points.length) continue;
-    
-    const thornGeo = new THREE.ConeGeometry(0.01, params.thornLength * 0.2, 6);
-    const thorn = new THREE.Mesh(thornGeo, createMaterial(params.thornColor, { roughness: 0.6 }));
-    thorn.position.copy(points[idx]);
-    thorn.position.y += 0.01;
-    thorn.rotation.x = Math.PI / 2;
-    add(thorn);
-  }
-}
-
-function buildLeafTrichomes(params, points) {
-  const trichomeCount = Math.round(params.trichomeDensity * 8);
-  for (let i = 0; i < trichomeCount; i++) {
-    const idx = Math.floor(Math.random() * points.length);
-    const hairGeo = new THREE.CylinderGeometry(0.002, 0.004, 0.05, 5);
-    const hair = new THREE.Mesh(hairGeo, createMaterial(params.leafColor, { roughness: 0.9, transparent: true, opacity: 0.6 }));
-    hair.position.copy(points[idx]);
-    hair.position.y += 0.015;
-    add(hair);
   }
 }
 
@@ -293,7 +291,7 @@ function buildBud(params, stemTop) {
   if (budGrowth < 0.02 || bloomOpening > 0.98) return;
 
   const budColor = new THREE.Color(params.stemColor).lerp(new THREE.Color(params.colorBase), 0.3);
-  const bud = new THREE.Mesh(new THREE.SphereGeometry(0.25 * budGrowth, 18, 14), createMaterial(budColor, { roughness: 0.46, transparent: true, opacity: 1 - bloomOpening * 0.9 }));
+  const bud = new THREE.Mesh(new THREE.SphereGeometry(0.25 * budGrowth, 20, 16), createMaterial(budColor, { roughness: 0.42, transparent: true, opacity: 1 - bloomOpening * 0.9 }));
   bud.scale.set(0.84, 1.3, 0.84);
   bud.position.y = stemTop + 0.06 * budGrowth;
   add(bud);
@@ -301,7 +299,7 @@ function buildBud(params, stemTop) {
 
 function makePetalPoints(params, angle, layer, stemTop, petalSize, opening, offset) {
   const points = [];
-  const segments = 30;
+  const segments = 36;
   const layerScale = layer === 1 ? 0.72 : 1;
   for (let s = 0; s <= segments; s++) {
     const t = s / segments;
@@ -342,7 +340,15 @@ function buildPetals(params, stemTop) {
       });
       const shade = 0.3 + (i % 4) * 0.13 + layer * 0.08;
       const petalColor = baseColor.clone().lerp(tipColor, Math.min(0.92, shade));
-      const petal = new THREE.Mesh(makeRibbonGeometry(points, widths), createMaterial(petalColor, { roughness: 0.43, emissive: petalColor.clone().multiplyScalar(0.055) }));
+      
+      const petal = new THREE.Mesh(
+        makeRibbonGeometry(points, widths),
+        createMaterial(petalColor, {
+          roughness: 0.32,
+          metalness: 0.08,
+          emissive: petalColor.clone().multiplyScalar(0.065),
+        })
+      );
       add(petal);
     }
   }
@@ -350,14 +356,20 @@ function buildPetals(params, stemTop) {
 
 function makeTube(points, radius, color) {
   const curve = new THREE.CatmullRomCurve3(points);
-  return new THREE.Mesh(new THREE.TubeGeometry(curve, 18, radius, 7, false), createMaterial(color, { roughness: 0.35 }));
+  return new THREE.Mesh(new THREE.TubeGeometry(curve, 24, radius, 8, false), createMaterial(color, { roughness: 0.3 }));
 }
 
 function buildCoreStamensAndPollen(params, stemTop) {
   const coreGrowth = stage(day, 76, 94);
   if (coreGrowth < 0.02) return;
 
-  const core = new THREE.Mesh(new THREE.SphereGeometry(0.13 * coreGrowth, 16, 12), createMaterial(params.antherColor, { roughness: 0.35, emissive: new THREE.Color(params.antherColor).multiplyScalar(0.08) }));
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(0.14 * coreGrowth, 20, 16),
+    createMaterial(params.antherColor, {
+      roughness: 0.28,
+      emissive: new THREE.Color(params.antherColor).multiplyScalar(0.12),
+    })
+  );
   core.position.y = stemTop + 0.02;
   add(core);
 
@@ -373,19 +385,19 @@ function buildCoreStamensAndPollen(params, stemTop) {
     ];
     const filament = makeTube(points, 0.014 * coreGrowth, params.filamentColor);
     add(filament);
-    const anther = new THREE.Mesh(new THREE.SphereGeometry(0.052 * coreGrowth, 10, 8), createMaterial(params.antherColor, { roughness: 0.34 }));
+    const anther = new THREE.Mesh(new THREE.SphereGeometry(0.052 * coreGrowth, 12, 10), createMaterial(params.antherColor, { roughness: 0.28 }));
     anther.position.copy(points[2]);
     anther.scale.set(0.8, 1.35, 0.8);
     add(anther);
   }
 
-  const pollenMaterial = createMaterial(params.pollenColor, { roughness: 0.3, emissive: new THREE.Color(params.pollenColor).multiplyScalar(0.05) });
+  const pollenMaterial = createMaterial(params.pollenColor, { roughness: 0.25, emissive: new THREE.Color(params.pollenColor).multiplyScalar(0.08) });
   const grainCount = Math.round(params.pollenAmount * coreGrowth);
   for (let i = 0; i < grainCount; i++) {
     const angle = i * 2.399963;
     const radius = 0.03 + (((i * 17) % 100) / 100) * 0.24 * coreGrowth;
     const pollenY = stemTop + params.stamenHeight * coreGrowth * (0.62 + (((i * 13) % 100) / 100) * 0.45);
-    const pollen = new THREE.Mesh(new THREE.SphereGeometry(params.pollenSize * coreGrowth, 7, 6), pollenMaterial);
+    const pollen = new THREE.Mesh(new THREE.SphereGeometry(params.pollenSize * coreGrowth, 8, 8), pollenMaterial);
     pollen.position.set(Math.cos(angle) * radius, pollenY, Math.sin(angle) * radius);
     add(pollen);
   }
@@ -401,8 +413,8 @@ function buildCarnivorousStructures(params, stemTop) {
   
   if (params.trapType === "snap") {
     for (let side = -1; side <= 1; side += 2) {
-      const lobeGeo = new THREE.SphereGeometry(trapSize * 0.5, 16, 12);
-      const lobe = new THREE.Mesh(lobeGeo, createMaterial(params.lureColor, { roughness: 0.4, side: THREE.DoubleSide }));
+      const lobeGeo = new THREE.SphereGeometry(trapSize * 0.5, 20, 16);
+      const lobe = new THREE.Mesh(lobeGeo, createMaterial(params.lureColor, { roughness: 0.35, side: THREE.DoubleSide }));
       lobe.position.set(0, stemTop + trapSize * 0.3, side * trapSize * 0.4);
       lobe.scale.set(1, 0.6, 0.8);
       lobe.rotation.x = side * 0.3;
@@ -416,41 +428,17 @@ function buildCarnivorousStructures(params, stemTop) {
       }
     }
   } else if (params.trapType === "pitcher") {
-    const pitcherGeo = new THREE.CylinderGeometry(trapSize * 0.3, trapSize * 0.5, trapSize * 0.8, 12);
-    const pitcher = new THREE.Mesh(pitcherGeo, createMaterial(params.lureColor, { roughness: 0.5, transparent: true, opacity: 0.9 }));
+    const pitcherGeo = new THREE.CylinderGeometry(trapSize * 0.3, trapSize * 0.5, trapSize * 0.8, 16);
+    const pitcher = new THREE.Mesh(pitcherGeo, createMaterial(params.lureColor, { roughness: 0.4, transparent: true, opacity: 0.9 }));
     pitcher.position.set(0, stemTop + trapSize * 0.4, 0);
     pitcher.rotation.x = 0.3;
     add(pitcher);
     
-    const fluidGeo = new THREE.CylinderGeometry(trapSize * 0.25, trapSize * 0.45, trapSize * 0.3, 12);
-    const fluid = new THREE.Mesh(fluidGeo, createMaterial(params.digestiveFluidColor, { roughness: 0.3, transparent: true, opacity: 0.7 }));
+    const fluidGeo = new THREE.CylinderGeometry(trapSize * 0.25, trapSize * 0.45, trapSize * 0.3, 16);
+    const fluid = new THREE.Mesh(fluidGeo, createMaterial(params.digestiveFluidColor, { roughness: 0.25, transparent: true, opacity: 0.75 }));
     fluid.position.set(0, stemTop + trapSize * 0.2, 0);
     fluid.rotation.x = 0.3;
     add(fluid);
-  } else if (params.trapType === "sticky") {
-    for (let i = 0; i < 15; i++) {
-      const angle = (i / 15) * Math.PI * 2;
-      const stalkGeo = new THREE.CylinderGeometry(0.008, 0.012, trapSize * 0.4, 8);
-      const stalk = new THREE.Mesh(stalkGeo, createMaterial(params.stemColor, { roughness: 0.7 }));
-      stalk.position.set(Math.cos(angle) * trapSize * 0.3, stemTop, Math.sin(angle) * trapSize * 0.3);
-      add(stalk);
-      
-      const glandGeo = new THREE.SphereGeometry(trapSize * 0.08, 8, 6);
-      const gland = new THREE.Mesh(glandGeo, createMaterial(params.lureColor, { roughness: 0.4, emissive: new THREE.Color(params.lureColor).multiplyScalar(params.nectarGlow) }));
-      gland.position.set(Math.cos(angle) * trapSize * 0.3, stemTop + trapSize * 0.4, Math.sin(angle) * trapSize * 0.3);
-      add(gland);
-    }
-  } else if (params.trapType === "bladder") {
-    const bladderGeo = new THREE.SphereGeometry(trapSize * 0.4, 16, 12);
-    const bladder = new THREE.Mesh(bladderGeo, createMaterial(params.lureColor, { roughness: 0.4, transparent: true, opacity: 0.85 }));
-    bladder.position.set(0, stemTop + trapSize * 0.3, 0);
-    bladder.scale.set(0.8, 1.2, 0.8);
-    add(bladder);
-    
-    const doorGeo = new THREE.SphereGeometry(trapSize * 0.15, 10, 8);
-    const door = new THREE.Mesh(doorGeo, createMaterial(params.digestiveFluidColor, { roughness: 0.5 }));
-    door.position.set(0, stemTop + trapSize * 0.1, trapSize * 0.35);
-    add(door);
   }
 }
 
@@ -458,6 +446,10 @@ function rebuildFlower() {
   const params = readParams();
   const grown = plantGrowth(day);
   const stemTop = params.stemHeight * grown;
+  
+  // Dynamically focus camera look-at on top of the bloom as it grows
+  targetLookY = THREE.MathUtils.lerp(0.8, stemTop, 0.7);
+  
   clearFlower();
   buildStem(params, grown);
   buildLeaves(params, grown);
@@ -566,11 +558,54 @@ ui.loadFile.addEventListener("change", (event) => {
   event.target.value = "";
 });
 
-container.addEventListener("pointerdown", (event) => { dragging = true; dragStartX = event.clientX; dragStartYaw = yaw; container.setPointerCapture(event.pointerId); });
-container.addEventListener("pointermove", (event) => { if (!dragging) return; yaw = dragStartYaw + (event.clientX - dragStartX) * 0.012; });
+// View Presets
+$("viewSideBtn")?.addEventListener("click", () => {
+  cameraPitch = 0.05;
+  cameraRadius = 6.0;
+  updateCameraPosition();
+});
+
+$("viewAngledBtn")?.addEventListener("click", () => {
+  cameraPitch = 0.55;
+  cameraRadius = 5.8;
+  updateCameraPosition();
+});
+
+$("viewTopBtn")?.addEventListener("click", () => {
+  cameraPitch = 1.45; // ~83 degrees steep top-down
+  cameraRadius = 5.0;
+  updateCameraPosition();
+});
+
+// Full 2-Axis Orbit Controls (Pitch + Yaw + Pinch Zoom)
+container.addEventListener("pointerdown", (event) => {
+  dragging = true;
+  dragStartX = event.clientX;
+  dragStartY = event.clientY;
+  startYaw = cameraYaw;
+  startPitch = cameraPitch;
+  container.setPointerCapture(event.pointerId);
+});
+
+container.addEventListener("pointermove", (event) => {
+  if (!dragging) return;
+  const deltaX = event.clientX - dragStartX;
+  const deltaY = event.clientY - dragStartY;
+  
+  cameraYaw = startYaw - deltaX * 0.012;
+  // Vertical pitch clamped from -10° to almost direct overhead (+85°)
+  cameraPitch = THREE.MathUtils.clamp(startPitch + deltaY * 0.012, -0.15, 1.48);
+  updateCameraPosition();
+});
+
 container.addEventListener("pointerup", () => { dragging = false; });
 container.addEventListener("pointercancel", () => { dragging = false; });
-container.addEventListener("wheel", (event) => { event.preventDefault(); camera.position.z = THREE.MathUtils.clamp(camera.position.z + event.deltaY * 0.004, 3.7, 10); }, { passive: false });
+
+container.addEventListener("wheel", (event) => {
+  event.preventDefault();
+  cameraRadius = THREE.MathUtils.clamp(cameraRadius + event.deltaY * 0.005, 2.5, 12);
+  updateCameraPosition();
+}, { passive: false });
 
 function animate(now) {
   requestAnimationFrame(animate);
@@ -582,13 +617,18 @@ function animate(now) {
     if (day >= totalDays) { playing = false; ui.playPauseBtn.textContent = "Play"; }
     rebuildFlower();
   }
-  if (!dragging) yaw += 0.0018;
-  flower.rotation.y = yaw;
+  
+  if (!dragging) {
+    cameraYaw += 0.0018;
+  }
+  
+  updateCameraPosition();
   renderer.render(scene, camera);
 }
 
 window.addEventListener("resize", resizeRenderer);
 resizeRenderer();
 rebuildFlower();
+updateCameraPosition();
 requestAnimationFrame(animate);
 initializeExportButton();

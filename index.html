@@ -6,6 +6,27 @@
   <title>Abstract Bloom Lab</title>
   <link rel="stylesheet" href="style.css">
   <style>
+    .view-presets {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .view-btn {
+      padding: 8px 4px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .view-btn:active, .view-btn:hover {
+      background: rgba(102, 126, 234, 0.4);
+      border-color: #667eea;
+    }
     .export-section {
       margin-top: 24px;
       padding-top: 24px;
@@ -58,6 +79,12 @@
         <p class="eyebrow">VIRTUAL BOTANY</p>
         <h1>Abstract Bloom Lab</h1>
         <p class="intro">Build a flower, then watch it grow.</p>
+        
+        <div class="view-presets">
+          <button id="viewSideBtn" class="view-btn" type="button">🌿 Side</button>
+          <button id="viewAngledBtn" class="view-btn" type="button">📐 45° Tilt</button>
+          <button id="viewTopBtn" class="view-btn" type="button">🌸 Top View</button>
+        </div>
       </header>
 
       <section class="control-section">
@@ -405,6 +432,7 @@
         <input id="loadFile" type="file" accept="application/json,.json" hidden>
       </section>
 
+      <!-- Seamless 1-Click Launch into Living Sim -->
       <section class="control-section export-section">
         <h2>Living Ecosystem</h2>
 
