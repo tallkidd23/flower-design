@@ -12,19 +12,29 @@
             font-family: 'Courier New', monospace;
             background: #000;
             color: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+        #canvas-container { 
+            width: 100%;
+            height: 65vh;
+            background: #000;
+            flex-shrink: 0;
+        }
+        canvas { 
+            display: block; 
+            width: 100%;
+            height: 100%;
         }
         #controls { 
-            position: fixed; 
-            left: 0; 
-            top: 0; 
-            width: 400px; 
-            height: 100vh; 
+            width: 100%;
+            height: 35vh;
             overflow-y: auto; 
             background: #000;
             padding: 15px; 
             box-sizing: border-box;
             font-size: 11px;
-            border-right: 1px solid #333;
+            border-top: 1px solid #333;
         }
         #controls h2 { 
             color: #fff; 
@@ -103,19 +113,6 @@
             text-align: right;
             color: #666;
         }
-        #canvas-container { 
-            position: fixed; 
-            left: 400px; 
-            top: 0; 
-            width: calc(100% - 400px); 
-            height: 100vh;
-            background: #000;
-        }
-        canvas { 
-            display: block; 
-            width: 100%;
-            height: 100%;
-        }
         #controls::-webkit-scrollbar {
             width: 4px;
         }
@@ -128,6 +125,8 @@
     </style>
 </head>
 <body>
+    <div id="canvas-container"></div>
+    
     <div id="controls">
         <h2>Flower Design Studio</h2>
         
@@ -213,8 +212,6 @@
         <button id="simulateBtn">Simulate</button>
         <button id="resetBtn">Reset</button>
     </div>
-    
-    <div id="canvas-container"></div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="main.js"></script>
