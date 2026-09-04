@@ -1,464 +1,97 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Abstract Bloom Lab</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    .view-presets {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
-      margin-top: 10px;
-    }
-    .view-btn {
-      padding: 8px 4px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 6px;
-      color: #fff;
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .view-btn:active, .view-btn:hover {
-      background: rgba(102, 126, 234, 0.4);
-      border-color: #667eea;
-    }
-    .export-section {
-      margin-top: 24px;
-      padding-top: 24px;
-      border-top: 2px solid #e0e0e0;
-    }
-    .export-btn {
-      width: 100%;
-      padding: 14px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-bottom: 10px;
-    }
-    .export-btn:active {
-      transform: scale(0.98);
-    }
-    .export-hint {
-      font-size: 0.85rem;
-      color: #666;
-      line-height: 1.5;
-      margin-bottom: 12px;
-    }
-    .simulation-link {
-      display: block;
-      padding: 12px;
-      background: #f0f0f0;
-      border-radius: 8px;
-      text-align: center;
-      text-decoration: none;
-      color: #333;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
-    .simulation-link:hover {
-      background: #e0e0e0;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flower Design Studio</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main id="app">
-    <section id="canvas-container" aria-label="Interactive flower preview"></section>
+    <div class="container">
+        <header>
+            <h1>🌸 Flower Design Studio</h1>
+            <p class="subtitle">Create unique flowers with genetic inheritance and pollination simulation</p>
+        </header>
 
-    <aside id="controls">
-      <header>
-        <p class="eyebrow">VIRTUAL BOTANY</p>
-        <h1>Abstract Bloom Lab</h1>
-        <p class="intro">Build a flower, then watch it grow.</p>
-        
-        <div class="view-presets">
-          <button id="viewSideBtn" class="view-btn" type="button">🌿 Side</button>
-          <button id="viewAngledBtn" class="view-btn" type="button">📐 45° Tilt</button>
-          <button id="viewTopBtn" class="view-btn" type="button">🌸 Top View</button>
-        </div>
-      </header>
+        <div class="main-content">
+            <div class="canvas-section">
+                <canvas id="flowerCanvas" width="800" height="600"></canvas>
+                <div class="canvas-controls">
+                    <button id="saveBtn" class="btn-primary">💾 Save Design</button>
+                    <button id="exportBtn" class="btn-primary">📤 Export SVG</button>
+                    <button id="simulateBtn" class="btn-secondary">🐝 Start Pollination</button>
+                </div>
+            </div>
 
-      <section class="control-section">
-        <h2>Timeline</h2>
+            <div class="controls-section">
+                <div class="control-group">
+                    <h3>Flower Properties</h3>
+                    <label>Petal Count: <span id="petalCountValue">5</span></label>
+                    <input type="range" id="petalCount" min="3" max="20" value="5">
 
-        <label class="range-label" for="daySlider">
-          Day <output id="dayValue">0</output>
-          <span>/ 100</span>
-        </label>
+                    <label>Petal Length: <span id="petalLengthValue">80</span></label>
+                    <input type="range" id="petalLength" min="30" max="150" value="80">
 
-        <input id="daySlider" type="range" min="0" max="100" step="1" value="0">
+                    <label>Petal Width: <span id="petalWidthValue">40</span></label>
+                    <input type="range" id="petalWidth" min="15" max="80" value="40">
 
-        <div class="button-grid two">
-          <button id="playPauseBtn" type="button">Play</button>
-          <button id="resetBtn" type="button">Seed</button>
-        </div>
-      </section>
+                    <label>Stem Length: <span id="stemLengthValue">200</span></label>
+                    <input type="range" id="stemLength" min="100" max="350" value="200">
 
-      <section class="control-section">
-        <h2>Petals &amp; Phyllotaxis</h2>
+                    <label>Leaf Count: <span id="leafCountValue">3</span></label>
+                    <input type="range" id="leafCount" min="0" max="8" value="3">
+                </div>
 
-        <div class="field">
-          <label for="petalArrangement">Arrangement
-            <select id="petalArrangement">
-              <option value="whorled" selected>Whorled (Concentric Rings)</option>
-              <option value="fibonacci">Fibonacci Spiral (Golden Angle)</option>
-            </select>
-          </label>
-        </div>
+                <div class="control-group">
+                    <h3>Colors</h3>
+                    <label>Petal Color:</label>
+                    <input type="color" id="petalColor" value="#FF69B4">
 
-        <div class="field">
-          <label for="petalCount">Count <output id="petalCountValue">9</output></label>
-          <input id="petalCount" type="range" min="3" max="55" step="1" value="9">
-        </div>
+                    <label>Center Color:</label>
+                    <input type="color" id="centerColor" value="#FFD700">
 
-        <div class="field">
-          <label for="petalLength">Length <output id="petalLengthValue">1.8</output></label>
-          <input id="petalLength" type="range" min="0.5" max="3.2" step="0.1" value="1.8">
-        </div>
+                    <label>Stem Color:</label>
+                    <input type="color" id="stemColor" value="#228B22">
 
-        <div class="field">
-          <label for="petalWidth">Width <output id="petalWidthValue">0.42</output></label>
-          <input id="petalWidth" type="range" min="0.12" max="0.95" step="0.01" value="0.42">
-        </div>
+                    <label>Leaf Color:</label>
+                    <input type="color" id="leafColor" value="#32CD32">
+                </div>
 
-        <div class="field">
-          <label for="petalCurl">Curl <output id="petalCurlValue">0.35</output></label>
-          <input id="petalCurl" type="range" min="-1" max="1" step="0.05" value="0.35">
-        </div>
+                <div class="control-group">
+                    <h3>3D Rendering</h3>
+                    <label>
+                        <input type="checkbox" id="enable3D" checked>
+                        Enable 3D textures and realistic leaf attachments
+                    </label>
+                    <p class="help-text">Adds depth, shadows, vein textures, and realistic stem connections</p>
+                </div>
 
-        <div class="field">
-          <label for="bloomOpenness">Openness <output id="bloomOpennessValue">0.78</output></label>
-          <input id="bloomOpenness" type="range" min="0" max="1" step="0.02" value="0.78">
-        </div>
+                <div class="control-group">
+                    <h3>Genetics</h3>
+                    <button id="randomizeBtn" class="btn-secondary">🎲 Randomize Genetics</button>
+                    <button id="saveGeneticsBtn" class="btn-secondary">💾 Save to Garden</button>
+                </div>
 
-        <div class="select-row">
-          <label>Shape
-            <select id="petalShape">
-              <option value="round">Round</option>
-              <option value="long" selected>Long</option>
-            </select>
-          </label>
-          <label>Edge
-            <select id="petalEdge">
-              <option value="smooth">Smooth</option>
-              <option value="ruffled" selected>Ruffled</option>
-            </select>
-          </label>
-          <label>Layers
-            <select id="petalLayers">
-              <option value="single">Single</option>
-              <option value="double" selected>Double</option>
-            </select>
-          </label>
+                <div class="info-panel">
+                    <h3>🌿 Enhanced Features</h3>
+                    <ul>
+                        <li><strong>3D Leaf Textures:</strong> Procedural vein patterns with natural variation</li>
+                        <li><strong>Realistic Attachments:</strong> Leaves connect to stems with petioles</li>
+                        <li><strong>Depth Rendering:</strong> Shadows and highlights for 3D appearance</li>
+                        <li><strong>Petal Curvature:</strong> 3D petal surfaces with radial gradients</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
-        <div class="color-row">
-          <label>Base
-            <input id="colorBase" type="color" value="#3a1670">
-          </label>
-          <label>Tip
-            <input id="colorTip" type="color" value="#da9cff">
-          </label>
-        </div>
-      </section>
+        <footer>
+            <p>Created with genetic algorithms and canvas rendering | <a href="simulation-demo.html">Try the Simulation Demo</a></p>
+        </footer>
+    </div>
 
-      <section class="control-section">
-        <h2>Stem &amp; leaves</h2>
-
-        <div class="field">
-          <label for="stemHeight">Stem height <output id="stemHeightValue">2.1</output></label>
-          <input id="stemHeight" type="range" min="0.6" max="3.5" step="0.1" value="2.1">
-        </div>
-
-        <div class="field">
-          <label for="stemWidth">Stem width <output id="stemWidthValue">0.35</output></label>
-          <input id="stemWidth" type="range" min="0.1" max="1.0" step="0.02" value="0.35">
-        </div>
-
-        <div class="field">
-          <label for="leafCount">Leaf count <output id="leafCountValue">7</output></label>
-          <input id="leafCount" type="range" min="0" max="14" step="1" value="7">
-        </div>
-
-        <div class="field">
-          <label for="leafLength">Leaf length <output id="leafLengthValue">0.72</output></label>
-          <input id="leafLength" type="range" min="0.25" max="1.4" step="0.01" value="0.72">
-        </div>
-
-        <div class="field">
-          <label for="leafWidth">Leaf width <output id="leafWidthValue">0.24</output></label>
-          <input id="leafWidth" type="range" min="0.08" max="0.55" step="0.01" value="0.24">
-        </div>
-
-        <div class="select-row two-selects">
-          <label>Leaf edge
-            <select id="leafEdge">
-              <option value="smooth">Smooth</option>
-              <option value="jagged" selected>Jagged</option>
-            </select>
-          </label>
-          <label>Pattern
-            <select id="leafPattern">
-              <option value="solid">Solid</option>
-              <option value="variegated" selected>Variegated</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="color-row three">
-          <label>Stem
-            <input id="stemColor" type="color" value="#28643a">
-          </label>
-          <label>Leaf
-            <input id="leafColor" type="color" value="#1b5b35">
-          </label>
-          <label>Variegation
-            <input id="variegationColor" type="color" value="#d2e6ab">
-          </label>
-        </div>
-      </section>
-
-      <section class="control-section">
-        <h2>Stamens &amp; pollen</h2>
-
-        <div class="field">
-          <label for="stamenCount">Stamen count <output id="stamenCountValue">12</output></label>
-          <input id="stamenCount" type="range" min="0" max="30" step="1" value="12">
-        </div>
-
-        <div class="field">
-          <label for="stamenHeight">Stamen height <output id="stamenHeightValue">0.66</output></label>
-          <input id="stamenHeight" type="range" min="0.15" max="1.4" step="0.01" value="0.66">
-        </div>
-
-        <div class="field">
-          <label for="pollenAmount">Pollen grains <output id="pollenAmountValue">38</output></label>
-          <input id="pollenAmount" type="range" min="0" max="100" step="1" value="38">
-        </div>
-
-        <div class="field">
-          <label for="pollenSize">Grain size <output id="pollenSizeValue">0.025</output></label>
-          <input id="pollenSize" type="range" min="0.008" max="0.06" step="0.001" value="0.025">
-        </div>
-
-        <div class="color-row three">
-          <label>Filament
-            <input id="filamentColor" type="color" value="#f3e9ff">
-          </label>
-          <label>Anther
-            <input id="antherColor" type="color" value="#d78b18">
-          </label>
-          <label>Pollen
-            <input id="pollenColor" type="color" value="#ffe06d">
-          </label>
-        </div>
-      </section>
-
-      <section class="control-section">
-        <h2>Defenses</h2>
-
-        <div class="field">
-          <label for="thornPresence">Thorns
-            <select id="thornPresence">
-              <option value="false">None</option>
-              <option value="true">Present</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="field">
-          <label for="thornDensity">Thorn density <output id="thornDensityValue">0.5</output></label>
-          <input id="thornDensity" type="range" min="0" max="1" step="0.05" value="0.5">
-        </div>
-
-        <div class="field">
-          <label for="thornLength">Thorn length <output id="thornLengthValue">0.3</output></label>
-          <input id="thornLength" type="range" min="0.1" max="0.8" step="0.05" value="0.3">
-        </div>
-
-        <div class="select-row">
-          <label>Thorn shape
-            <select id="thornShape">
-              <option value="straight">Straight</option>
-              <option value="curved">Curved</option>
-              <option value="hooked">Hooked</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="field">
-          <label for="trichomeDensity">Hair density (trichomes) <output id="trichomeDensityValue">0.2</output></label>
-          <input id="trichomeDensity" type="range" min="0" max="1" step="0.05" value="0.2">
-        </div>
-
-        <div class="field">
-          <label for="surfaceTexture">Surface texture
-            <select id="surfaceTexture">
-              <option value="smooth">Smooth</option>
-              <option value="waxy">Waxy</option>
-              <option value="rough">Rough</option>
-              <option value="sticky">Sticky</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="color-row">
-          <label>Thorn color
-            <input id="thornColor" type="color" value="#8b4513">
-          </label>
-        </div>
-      </section>
-
-      <section class="control-section">
-        <h2>Carnivorous Mode</h2>
-
-        <div class="field">
-          <label for="carnivorousMode">Carnivorous
-            <select id="carnivorousMode">
-              <option value="false">Disabled</option>
-              <option value="true">Enabled</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="select-row">
-          <label>Trap type
-            <select id="trapType">
-              <option value="snap">Snap trap</option>
-              <option value="pitcher">Pitcher</option>
-              <option value="sticky">Sticky leaves</option>
-              <option value="bladder">Bladder trap</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="field">
-          <label for="trapSize">Trap size <output id="trapSizeValue">0.5</output></label>
-          <input id="trapSize" type="range" min="0.2" max="1.2" step="0.05" value="0.5">
-        </div>
-
-        <div class="field">
-          <label for="lureColor">Lure color
-            <input id="lureColor" type="color" value="#ff1493">
-          </label>
-        </div>
-
-        <div class="field">
-          <label for="nectarGlow">Nectar glow <output id="nectarGlowValue">0.6</output></label>
-          <input id="nectarGlow" type="range" min="0" max="1" step="0.05" value="0.6">
-        </div>
-
-        <div class="field">
-          <label for="digestiveFluidColor">Digestive fluid
-            <input id="digestiveFluidColor" type="color" value="#8b0000">
-          </label>
-        </div>
-
-        <div class="field">
-          <label for="captureSpeed">Capture speed <output id="captureSpeedValue">0.5</output></label>
-          <input id="captureSpeed" type="range" min="0.1" max="1" step="0.05" value="0.5">
-        </div>
-      </section>
-
-      <section class="control-section">
-        <h2>Advanced Physiology</h2>
-
-        <div class="field">
-          <label for="scentProfile">Scent profile
-            <select id="scentProfile">
-              <option value="sweet">Sweet</option>
-              <option value="spiced">Spiced</option>
-              <option value="fruity">Fruity</option>
-              <option value="floral">Floral</option>
-              <option value="musky">Musky</option>
-              <option value="none">None</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="field">
-          <label for="uvPattern">UV pattern strength <output id="uvPatternValue">0.4</output></label>
-          <input id="uvPattern" type="range" min="0" max="1" step="0.05" value="0.4">
-        </div>
-
-        <div class="field">
-          <label for="nectarGuides">Nectar guides
-            <select id="nectarGuides">
-              <option value="none">None</option>
-              <option value="lines">Lines</option>
-              <option value="spots">Spots</option>
-              <option value="rings">Rings</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="field">
-          <label for="photosynthesisEfficiency">Photosynthesis efficiency <output id="photosynthesisEfficiencyValue">0.6</output></label>
-          <input id="photosynthesisEfficiency" type="range" min="0.3" max="1" step="0.05" value="0.6">
-        </div>
-
-        <div class="field">
-          <label for="waterDemand">Water demand <output id="waterDemandValue">0.5</output></label>
-          <input id="waterDemand" type="range" min="0.2" max="1" step="0.05" value="0.5">
-        </div>
-
-        <div class="field">
-          <label for="growthPace">Growth pace
-            <select id="growthPace">
-              <option value="slow">Slow</option>
-              <option value="moderate" selected>Moderate</option>
-              <option value="fast">Fast</option>
-            </select>
-          </label>
-        </div>
-      </section>
-
-      <section class="control-section">
-        <h2>Design</h2>
-
-        <div class="field">
-          <label for="growthSpeed">
-            Growth speed <output id="growthSpeedValue">1.0</output>
-          </label>
-          <input id="growthSpeed" type="range" min="0.2" max="3" step="0.1" value="1">
-        </div>
-
-        <div class="button-grid">
-          <button id="randomizeBtn" type="button">Randomize bloom</button>
-          <button id="saveBtn" type="button">Save design</button>
-          <button id="loadBtn" type="button">Load design</button>
-        </div>
-
-        <input id="loadFile" type="file" accept="application/json,.json" hidden>
-      </section>
-
-      <section class="control-section export-section">
-        <h2>Living Ecosystem</h2>
-
-        <button id="exportSpeciesBtn" type="button" class="export-btn">
-          🚀 Send to Living Simulation
-        </button>
-
-        <p class="export-hint">
-          Takes your currently designed flower, creates a genetic blueprint, and opens it directly inside the active 3D ecosystem simulator.
-        </p>
-
-        <a href="simulation-demo.html" class="simulation-link">
-          🌿 View Simulation Field
-        </a>
-      </section>
-    </aside>
-  </main>
-
-  <script type="module" src="main.js"></script>
+    <!-- Core Scripts -->
+    <script src="plant-renderer-3d.js"></script>
+    <script src="main.js"></script>
+    <script src="export-integration.js"></script>
 </body>
 </html>
