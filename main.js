@@ -151,11 +151,13 @@ function makeRibbonGeometry(points, widths) {
 
 function buildStem(params, grown) {
   const height = Math.max(0.025, params.stemHeight * grown);
-  const rawWidth = (typeof params.stemWidth === "number" && !isNaN(params.stemWidth)) ? params.stemWidth : 0.35;
-  const topRadius = Math.max(0.015, rawWidth * 0.18);
-  const bottomRadius = Math.max(0.025, rawWidth * 0.35);
+  const w = (typeof params.stemWidth === "number" && !isNaN(params.stemWidth)) ? params.stemWidth : 0.35;
+  
+  // Direct dramatic dynamic range: 0.1 gives 0.02, 1.0 gives 0.35 top / 0.60 bottom
+  const topRadius = 0.02 + (w - 0.1) * 0.35;
+  const bottomRadius = 0.04 + (w - 0.1) * 0.60;
 
-  const geometry = new THREE.CylinderGeometry(topRadius, bottomRadius, height, 16);
+  const geometry = new THREE.CylinderGeometry(topRadius, bottomRadius, height, 18);
   const stem = new THREE.Mesh(geometry, createMaterial(params.stemColor, { roughness: 0.84 }));
   stem.position.y = height / 2;
   add(stem);
