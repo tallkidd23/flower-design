@@ -151,11 +151,11 @@ function makeRibbonGeometry(points, widths) {
 
 function buildStem(params, grown) {
   const height = Math.max(0.025, params.stemHeight * grown);
-  const widthMultiplier = (params.stemWidth || 0.35) * 2.8;
-  const topRadius = 0.045 * widthMultiplier;
-  const bottomRadius = 0.095 * widthMultiplier;
+  const rawWidth = (typeof params.stemWidth === "number" && !isNaN(params.stemWidth)) ? params.stemWidth : 0.35;
+  const topRadius = Math.max(0.015, rawWidth * 0.18);
+  const bottomRadius = Math.max(0.025, rawWidth * 0.35);
 
-  const geometry = new THREE.CylinderGeometry(topRadius, bottomRadius, height, 14);
+  const geometry = new THREE.CylinderGeometry(topRadius, bottomRadius, height, 16);
   const stem = new THREE.Mesh(geometry, createMaterial(params.stemColor, { roughness: 0.84 }));
   stem.position.y = height / 2;
   add(stem);
@@ -175,7 +175,7 @@ function buildThorns(params, startY, stemHeight, stemRadius) {
     const angle = (i / thornCount) * Math.PI * 2 + (i * 0.4);
     const y = startY + (Math.random() - 0.5) * stemHeight * 0.75;
     
-    const thornGeo = new THREE.ConeGeometry(0.02 * stemRadius * 15, thornLength, 8);
+    const thornGeo = new THREE.ConeGeometry(0.02, thornLength, 8);
     const thorn = new THREE.Mesh(thornGeo, createMaterial(params.thornColor, { roughness: 0.6 }));
     
     thorn.position.set(Math.cos(angle) * (stemRadius + 0.02), y, Math.sin(angle) * (stemRadius + 0.02));
