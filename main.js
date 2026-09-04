@@ -5,29 +5,20 @@ const $ = (id) => document.getElementById(id);
 
 const container = $("canvas-container");
 const scene = new THREE.Scene();
-
 scene.background = new THREE.Color(0x000000);
 
 const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-
 camera.position.set(0, 2.4, 6.6);
 
-const renderer = new THREE.WebGLRenderer({
-  antialias: true,
-  alpha: false,
-});
-
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-
 container.appendChild(renderer.domElement);
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.82));
-
 const keyLight = new THREE.DirectionalLight(0xffffff, 1.25);
 keyLight.position.set(3.5, 5.5, 4.5);
 scene.add(keyLight);
-
 const rimLight = new THREE.DirectionalLight(0x9d7cff, 0.7);
 rimLight.position.set(-4, 2.5, -4);
 scene.add(rimLight);
@@ -36,49 +27,34 @@ const flower = new THREE.Group();
 scene.add(flower);
 
 const totalDays = 100;
-
 let day = 0;
 let playing = false;
 let lastTime = performance.now();
 let flowerMeshes = [];
-
 let yaw = 0;
 let dragging = false;
 let dragStartX = 0;
 let dragStartYaw = 0;
 
 const ids = [
-  "petalCount",
-  "petalLength",
-  "petalWidth",
-  "petalCurl",
-  "bloomOpenness",
-  "petalShape",
-  "petalEdge",
-  "petalLayers",
-  "colorBase",
-  "colorTip",
-  "stemHeight",
-  "stemColor",
-  "leafCount",
-  "leafLength",
-  "leafWidth",
-  "leafEdge",
-  "leafPattern",
-  "leafColor",
-  "variegationColor",
-  "stamenCount",
-  "stamenHeight",
-  "filamentColor",
-  "antherColor",
-  "pollenAmount",
-  "pollenSize",
-  "pollenColor",
-  "growthSpeed",
+  "petalCount", "petalLength", "petalWidth", "petalCurl", "bloomOpenness",
+  "petalShape", "petalEdge", "petalLayers", "colorBase", "colorTip",
+  "stemHeight", "stemColor", "leafCount", "leafLength", "leafWidth",
+  "leafEdge", "leafPattern", "leafColor", "variegationColor",
+  "stamenCount", "stamenHeight", "filamentColor", "antherColor",
+  "pollenAmount", "pollenSize", "pollenColor", "growthSpeed",
+  // Defenses
+  "thornPresence", "thornDensity", "thornLength", "thornShape", "thornColor",
+  "trichomeDensity", "surfaceTexture",
+  // Carnivorous
+  "carnivorousMode", "trapType", "trapSize", "lureColor", "nectarGlow",
+  "digestiveFluidColor", "captureSpeed",
+  // Advanced physiology
+  "scentProfile", "uvPattern", "nectarGuides",
+  "photosynthesisEfficiency", "waterDemand", "growthPace"
 ];
 
 const ui = Object.fromEntries(ids.map((id) => [id, $(id)]));
-
 ui.daySlider = $("daySlider");
 ui.dayValue = $("dayValue");
 ui.playPauseBtn = $("playPauseBtn");
@@ -89,20 +65,12 @@ ui.loadBtn = $("loadBtn");
 ui.loadFile = $("loadFile");
 
 const outputIds = [
-  "petalCount",
-  "petalLength",
-  "petalWidth",
-  "petalCurl",
-  "bloomOpenness",
-  "stemHeight",
-  "leafCount",
-  "leafLength",
-  "leafWidth",
-  "stamenCount",
-  "stamenHeight",
-  "pollenAmount",
-  "pollenSize",
-  "growthSpeed",
+  "petalCount", "petalLength", "petalWidth", "petalCurl", "bloomOpenness",
+  "stemHeight", "leafCount", "leafLength", "leafWidth",
+  "stamenCount", "stamenHeight", "pollenAmount", "pollenSize", "growthSpeed",
+  "thornDensity", "thornLength", "trichomeDensity",
+  "trapSize", "nectarGlow", "captureSpeed",
+  "uvPattern", "photosynthesisEfficiency", "waterDemand"
 ];
 
 const outputs = Object.fromEntries(outputIds.map((id) => [id, $(`${id}Value`)]));
@@ -116,9 +84,7 @@ function readParams() {
 }
 
 function syncOutputs() {
-  for (const id of outputIds) {
-    outputs[id].textContent = ui[id].value;
-  }
+  for (const id of outputIds) outputs[id].textContent = ui[id].value;
   ui.dayValue.textContent = Math.round(day);
   ui.daySlider.value = Math.round(day);
 }
@@ -142,31 +108,18 @@ function clearFlower() {
   for (const mesh of flowerMeshes) {
     flower.remove(mesh);
     mesh.geometry?.dispose();
-    if (Array.isArray(mesh.material)) {
-      mesh.material.forEach((item) => item.dispose());
-    } else {
-      mesh.material?.dispose();
-    }
+    if (Array.isArray(mesh.material)) mesh.material.forEach((m) => m.dispose());
+    else mesh.material?.dispose();
   }
   flowerMeshes = [];
 }
 
 function createMaterial(color, options = {}) {
-  return new THREE.MeshStandardMaterial({
-    color,
-    roughness: 0.52,
-    metalness: 0.04,
-    side: THREE.DoubleSide,
-    ...options,
-  });
+  return new THREE.MeshStandardMaterial({ color, roughness: 0.52, metalness: 0.04, side: THREE.DoubleSide, ...options });
 }
 
 function makeRibbonGeometry(points, widths) {
-  const positions = [];
-  const normals = [];
-  const uvs = [];
-  const indices = [];
-
+  const positions = [], normals = [], uvs = [], indices = [];
   for (let i = 0; i < points.length; i++) {
     const t = i / (points.length - 1);
     const before = points[Math.max(0, i - 1)];
@@ -175,18 +128,15 @@ function makeRibbonGeometry(points, widths) {
     let side = new THREE.Vector3(0, 1, 0).cross(tangent);
     if (side.lengthSq() < 0.0001) side = new THREE.Vector3(1, 0, 0);
     side.normalize().multiplyScalar(widths[i] / 2);
-    const left = points[i].clone().add(side);
-    const right = points[i].clone().sub(side);
-    positions.push(left.x, left.y, left.z, right.x, right.y, right.z);
+    positions.push(points[i].x + side.x, points[i].y + side.y, points[i].z + side.z);
+    positions.push(points[i].x - side.x, points[i].y - side.y, points[i].z - side.z);
     normals.push(0, 1, 0, 0, 1, 0);
     uvs.push(0, t, 1, t);
   }
-
   for (let i = 0; i < points.length - 1; i++) {
     const a = i * 2;
     indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
   }
-
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
@@ -202,6 +152,51 @@ function buildStem(params, grown) {
   const stem = new THREE.Mesh(geometry, createMaterial(params.stemColor, { roughness: 0.84 }));
   stem.position.y = height / 2;
   add(stem);
+  
+  // Build thorns on stem
+  if (params.thornPresence === "true") buildThorns(params, stem.position.y, height, "stem");
+  
+  // Build trichomes
+  if (params.trichomeDensity > 0.05) buildTrichomes(params, stem.position.y, height, "stem");
+}
+
+function buildThorns(params, startY, stemHeight, location) {
+  const thornCount = Math.round(params.thornDensity * 12);
+  const thornLength = params.thornLength * 0.4;
+  
+  for (let i = 0; i < thornCount; i++) {
+    const angle = (i / thornCount) * Math.PI * 2;
+    const y = startY + Math.random() * stemHeight * 0.8;
+    
+    const thornGeo = new THREE.ConeGeometry(0.015, thornLength, 8);
+    const thorn = new THREE.Mesh(thornGeo, createMaterial(params.thornColor, { roughness: 0.6 }));
+    
+    thorn.position.set(Math.cos(angle) * 0.1, y, Math.sin(angle) * 0.1);
+    thorn.rotation.x = Math.PI / 2 - 0.3;
+    thorn.rotation.z = angle;
+    
+    if (params.thornShape === "curved") thorn.rotation.x += 0.2;
+    if (params.thornShape === "hooked") thorn.rotation.x += 0.4;
+    
+    add(thorn);
+  }
+}
+
+function buildTrichomes(params, startY, stemHeight, location) {
+  const trichomeCount = Math.round(params.trichomeDensity * 20);
+  
+  for (let i = 0; i < trichomeCount; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const y = startY + Math.random() * stemHeight;
+    
+    const hairGeo = new THREE.CylinderGeometry(0.003, 0.005, 0.08, 6);
+    const hair = new THREE.Mesh(hairGeo, createMaterial(params.stemColor, { roughness: 0.9, transparent: true, opacity: 0.7 }));
+    
+    hair.position.set(Math.cos(angle) * 0.1, y, Math.sin(angle) * 0.1);
+    hair.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.5;
+    
+    add(hair);
+  }
 }
 
 function buildLeaves(params, grown) {
@@ -238,11 +233,48 @@ function buildLeaves(params, grown) {
     add(leaf);
 
     if (params.leafPattern === "variegated") {
-      const stripePoints = points.map((point) => point.clone().add(new THREE.Vector3(0, 0.003, 0)));
+      const stripePoints = points.map((p) => p.clone().add(new THREE.Vector3(0, 0.003, 0)));
       const stripeWidths = widths.map((w) => w * 0.3);
       const stripe = new THREE.Mesh(makeRibbonGeometry(stripePoints, stripeWidths), createMaterial(params.variegationColor, { roughness: 0.62 }));
       add(stripe);
     }
+    
+    // Thorns on leaf edges
+    if (params.thornPresence === "true" && params.leafEdge === "jagged") {
+      buildLeafThorns(params, points, widths);
+    }
+    
+    // Trichomes on leaf surface
+    if (params.trichomeDensity > 0.1) {
+      buildLeafTrichomes(params, points);
+    }
+  }
+}
+
+function buildLeafThorns(params, points, widths) {
+  const thornCount = Math.min(3, Math.round(params.thornDensity * 5));
+  for (let i = 0; i < thornCount; i++) {
+    const idx = Math.floor((i + 1) * points.length / (thornCount + 1));
+    if (idx >= points.length) continue;
+    
+    const thornGeo = new THREE.ConeGeometry(0.01, params.thornLength * 0.2, 6);
+    const thorn = new THREE.Mesh(thornGeo, createMaterial(params.thornColor, { roughness: 0.6 }));
+    thorn.position.copy(points[idx]);
+    thorn.position.y += 0.01;
+    thorn.rotation.x = Math.PI / 2;
+    add(thorn);
+  }
+}
+
+function buildLeafTrichomes(params, points) {
+  const trichomeCount = Math.round(params.trichomeDensity * 8);
+  for (let i = 0; i < trichomeCount; i++) {
+    const idx = Math.floor(Math.random() * points.length);
+    const hairGeo = new THREE.CylinderGeometry(0.002, 0.004, 0.05, 5);
+    const hair = new THREE.Mesh(hairGeo, createMaterial(params.leafColor, { roughness: 0.9, transparent: true, opacity: 0.6 }));
+    hair.position.copy(points[idx]);
+    hair.position.y += 0.015;
+    add(hair);
   }
 }
 
@@ -262,7 +294,6 @@ function makePetalPoints(params, angle, layer, stemTop, petalSize, opening, offs
   const points = [];
   const segments = 30;
   const layerScale = layer === 1 ? 0.72 : 1;
-
   for (let s = 0; s <= segments; s++) {
     const t = s / segments;
     const twist = params.petalCurl * t * Math.PI * 0.72;
@@ -351,6 +382,76 @@ function buildCoreStamensAndPollen(params, stemTop) {
   }
 }
 
+function buildCarnivorousStructures(params, stemTop) {
+  if (params.carnivorousMode !== "true") return;
+  
+  const trapGrowth = stage(day, 60, 90);
+  if (trapGrowth < 0.02) return;
+  
+  const trapSize = params.trapSize * trapGrowth;
+  
+  if (params.trapType === "snap") {
+    // Venus flytrap-style lobes
+    for (let side = -1; side <= 1; side += 2) {
+      const lobeGeo = new THREE.SphereGeometry(trapSize * 0.5, 16, 12);
+      const lobe = new THREE.Mesh(lobeGeo, createMaterial(params.lureColor, { roughness: 0.4, side: THREE.DoubleSide }));
+      lobe.position.set(0, stemTop + trapSize * 0.3, side * trapSize * 0.4);
+      lobe.scale.set(1, 0.6, 0.8);
+      lobe.rotation.x = side * 0.3;
+      add(lobe);
+      
+      // Trigger hairs
+      for (let h = 0; h < 5; h++) {
+        const hairGeo = new THREE.CylinderGeometry(0.005, 0.008, trapSize * 0.3, 6);
+        const hair = new THREE.Mesh(hairGeo, createMaterial(params.stemColor, { roughness: 0.8 }));
+        hair.position.set((h - 2) * 0.04, stemTop + trapSize * 0.3, side * trapSize * 0.5);
+        add(hair);
+      }
+    }
+  } else if (params.trapType === "pitcher") {
+    // Pitcher trap
+    const pitcherGeo = new THREE.CylinderGeometry(trapSize * 0.3, trapSize * 0.5, trapSize * 0.8, 12);
+    const pitcher = new THREE.Mesh(pitcherGeo, createMaterial(params.lureColor, { roughness: 0.5, transparent: true, opacity: 0.9 }));
+    pitcher.position.set(0, stemTop + trapSize * 0.4, 0);
+    pitcher.rotation.x = 0.3;
+    add(pitcher);
+    
+    // Digestive fluid
+    const fluidGeo = new THREE.CylinderGeometry(trapSize * 0.25, trapSize * 0.45, trapSize * 0.3, 12);
+    const fluid = new THREE.Mesh(fluidGeo, createMaterial(params.digestiveFluidColor, { roughness: 0.3, transparent: true, opacity: 0.7 }));
+    fluid.position.set(0, stemTop + trapSize * 0.2, 0);
+    fluid.rotation.x = 0.3;
+    add(fluid);
+  } else if (params.trapType === "sticky") {
+    // Sticky glandular hairs
+    for (let i = 0; i < 15; i++) {
+      const angle = (i / 15) * Math.PI * 2;
+      const stalkGeo = new THREE.CylinderGeometry(0.008, 0.012, trapSize * 0.4, 8);
+      const stalk = new THREE.Mesh(stalkGeo, createMaterial(params.stemColor, { roughness: 0.7 }));
+      stalk.position.set(Math.cos(angle) * trapSize * 0.3, stemTop, Math.sin(angle) * trapSize * 0.3);
+      add(stalk);
+      
+      const glandGeo = new THREE.SphereGeometry(trapSize * 0.08, 8, 6);
+      const gland = new THREE.Mesh(glandGeo, createMaterial(params.lureColor, { roughness: 0.4, emissive: new THREE.Color(params.lureColor).multiplyScalar(params.nectarGlow) }));
+      gland.position.set(Math.cos(angle) * trapSize * 0.3, stemTop + trapSize * 0.4, Math.sin(angle) * trapSize * 0.3);
+      add(gland);
+    }
+  } else if (params.trapType === "bladder") {
+    // Bladder trap pouch
+    const bladderGeo = new THREE.SphereGeometry(trapSize * 0.4, 16, 12);
+    const bladder = new THREE.Mesh(bladderGeo, createMaterial(params.lureColor, { roughness: 0.4, transparent: true, opacity: 0.85 }));
+    bladder.position.set(0, stemTop + trapSize * 0.3, 0);
+    bladder.scale.set(0.8, 1.2, 0.8);
+    add(bladder);
+    
+    // Trap door
+    const doorGeo = new THREE.SphereGeometry(trapSize * 0.15, 10, 8);
+    const door = new THREE.Mesh(doorGeo, createMaterial(params.digestiveFluidColor, { roughness: 0.5 }));
+    door.position.set(0, stemTop + trapSize * 0.1, trapSize * 0.35);
+    add(door);
+  }
+}
+
 function rebuildFlower() {
   const params = readParams();
   const grown = plantGrowth(day);
@@ -361,6 +462,7 @@ function rebuildFlower() {
   buildBud(params, stemTop);
   buildPetals(params, stemTop);
   buildCoreStamensAndPollen(params, stemTop);
+  buildCarnivorousStructures(params, stemTop);
   syncOutputs();
 }
 
@@ -403,35 +505,38 @@ function randomizeFlower() {
   ui.pollenAmount.value = String(15 + Math.floor(Math.random() * 70));
   ui.pollenSize.value = (0.014 + Math.random() * 0.032).toFixed(3);
   ui.pollenColor.value = randomHexColor();
+  
+  // Randomize defenses
+  ui.thornPresence.value = Math.random() > 0.5 ? "true" : "false";
+  ui.thornDensity.value = (Math.random() * 0.8).toFixed(2);
+  ui.thornLength.value = (0.2 + Math.random() * 0.5).toFixed(2);
+  ui.thornShape.value = ["straight", "curved", "hooked"][Math.floor(Math.random() * 3)];
+  ui.thornColor.value = randomHexColor();
+  ui.trichomeDensity.value = (Math.random() * 0.7).toFixed(2);
+  
+  // Randomize carnivorous
+  ui.carnivorousMode.value = Math.random() > 0.7 ? "true" : "false";
+  ui.trapType.value = ["snap", "pitcher", "sticky", "bladder"][Math.floor(Math.random() * 4)];
+  ui.trapSize.value = (0.3 + Math.random() * 0.7).toFixed(2);
+  ui.lureColor.value = randomHexColor();
+  ui.digestiveFluidColor.value = randomHexColor();
+  
+  // Randomize physiology
+  ui.scentProfile.value = ["sweet", "spiced", "fruity", "floral", "musky", "none"][Math.floor(Math.random() * 6)];
+  ui.uvPattern.value = (Math.random() * 0.8).toFixed(2);
+  
   day = totalDays;
   rebuildFlower();
 }
 
-for (const id of ids) {
-  ui[id].addEventListener("input", rebuildFlower);
-}
-
-ui.daySlider.addEventListener("input", () => {
-  day = Number(ui.daySlider.value);
-  rebuildFlower();
-});
-
-ui.playPauseBtn.addEventListener("click", () => {
-  playing = !playing;
-  ui.playPauseBtn.textContent = playing ? "Pause" : "Play";
-});
-
-ui.resetBtn.addEventListener("click", () => {
-  playing = false;
-  ui.playPauseBtn.textContent = "Play";
-  day = 0;
-  rebuildFlower();
-});
-
+for (const id of ids) ui[id].addEventListener("input", rebuildFlower);
+ui.daySlider.addEventListener("input", () => { day = Number(ui.daySlider.value); rebuildFlower(); });
+ui.playPauseBtn.addEventListener("click", () => { playing = !playing; ui.playPauseBtn.textContent = playing ? "Pause" : "Play"; });
+ui.resetBtn.addEventListener("click", () => { playing = false; ui.playPauseBtn.textContent = "Play"; day = 0; rebuildFlower(); });
 ui.randomizeBtn.addEventListener("click", randomizeFlower);
 
 ui.saveBtn.addEventListener("click", () => {
-  const design = { name: "Abstract Bloom", version: "0.3", day, ...readParams() };
+  const design = { name: "Abstract Bloom", version: "0.4", day, ...readParams() };
   const blob = new Blob([JSON.stringify(design, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -442,7 +547,6 @@ ui.saveBtn.addEventListener("click", () => {
 });
 
 ui.loadBtn.addEventListener("click", () => ui.loadFile.click());
-
 ui.loadFile.addEventListener("change", (event) => {
   const [file] = event.target.files;
   if (!file) return;
@@ -450,38 +554,20 @@ ui.loadFile.addEventListener("change", (event) => {
   reader.onload = () => {
     try {
       const design = JSON.parse(reader.result);
-      for (const id of ids) {
-        if (design[id] !== undefined) ui[id].value = design[id];
-      }
+      for (const id of ids) if (design[id] !== undefined) ui[id].value = design[id];
       day = Number(design.day ?? totalDays);
       rebuildFlower();
-    } catch {
-      alert("That file is not a valid Abstract Bloom design.");
-    }
+    } catch { alert("That file is not a valid Abstract Bloom design."); }
   };
   reader.readAsText(file);
   event.target.value = "";
 });
 
-container.addEventListener("pointerdown", (event) => {
-  dragging = true;
-  dragStartX = event.clientX;
-  dragStartYaw = yaw;
-  container.setPointerCapture(event.pointerId);
-});
-
-container.addEventListener("pointermove", (event) => {
-  if (!dragging) return;
-  yaw = dragStartYaw + (event.clientX - dragStartX) * 0.012;
-});
-
+container.addEventListener("pointerdown", (event) => { dragging = true; dragStartX = event.clientX; dragStartYaw = yaw; container.setPointerCapture(event.pointerId); });
+container.addEventListener("pointermove", (event) => { if (!dragging) return; yaw = dragStartYaw + (event.clientX - dragStartX) * 0.012; });
 container.addEventListener("pointerup", () => { dragging = false; });
 container.addEventListener("pointercancel", () => { dragging = false; });
-
-container.addEventListener("wheel", (event) => {
-  event.preventDefault();
-  camera.position.z = THREE.MathUtils.clamp(camera.position.z + event.deltaY * 0.004, 3.7, 10);
-}, { passive: false });
+container.addEventListener("wheel", (event) => { event.preventDefault(); camera.position.z = THREE.MathUtils.clamp(camera.position.z + event.deltaY * 0.004, 3.7, 10); }, { passive: false });
 
 function animate(now) {
   requestAnimationFrame(animate);
@@ -490,10 +576,7 @@ function animate(now) {
   if (playing) {
     const speed = Number(ui.growthSpeed.value);
     day = Math.min(totalDays, day + seconds * 16 * speed);
-    if (day >= totalDays) {
-      playing = false;
-      ui.playPauseBtn.textContent = "Play";
-    }
+    if (day >= totalDays) { playing = false; ui.playPauseBtn.textContent = "Play"; }
     rebuildFlower();
   }
   if (!dragging) yaw += 0.0018;
@@ -505,6 +588,4 @@ window.addEventListener("resize", resizeRenderer);
 resizeRenderer();
 rebuildFlower();
 requestAnimationFrame(animate);
-
-// Initialize export button
 initializeExportButton();

@@ -5,6 +5,7 @@ export function readCurrentDesignParams() {
   const $ = (id) => document.getElementById(id);
   
   return {
+    // Basic morphology
     petalCount: parseInt($("petalCount")?.value || "9", 10),
     petalLength: parseFloat($("petalLength")?.value || "1.8", 10),
     petalWidth: parseFloat($("petalWidth")?.value || "0.42", 10),
@@ -30,7 +31,33 @@ export function readCurrentDesignParams() {
     antherColor: $("antherColor")?.value || "#d78b18",
     pollenAmount: parseInt($("pollenAmount")?.value || "38", 10),
     pollenSize: parseFloat($("pollenSize")?.value || "0.025", 10),
-    pollenColor: $("pollenColor")?.value || "#ffe06d"
+    pollenColor: $("pollenColor")?.value || "#ffe06d",
+    
+    // Defenses
+    thornPresence: $("thornPresence")?.value || "false",
+    thornDensity: parseFloat($("thornDensity")?.value || "0.5", 10),
+    thornLength: parseFloat($("thornLength")?.value || "0.3", 10),
+    thornShape: $("thornShape")?.value || "straight",
+    thornColor: $("thornColor")?.value || "#8b4513",
+    trichomeDensity: parseFloat($("trichomeDensity")?.value || "0.2", 10),
+    surfaceTexture: $("surfaceTexture")?.value || "smooth",
+    
+    // Carnivorous
+    carnivorousMode: $("carnivorousMode")?.value || "false",
+    trapType: $("trapType")?.value || "snap",
+    trapSize: parseFloat($("trapSize")?.value || "0.5", 10),
+    lureColor: $("lureColor")?.value || "#ff1493",
+    nectarGlow: parseFloat($("nectarGlow")?.value || "0.6", 10),
+    digestiveFluidColor: $("digestiveFluidColor")?.value || "#8b0000",
+    captureSpeed: parseFloat($("captureSpeed")?.value || "0.5", 10),
+    
+    // Advanced physiology
+    scentProfile: $("scentProfile")?.value || "sweet",
+    uvPattern: parseFloat($("uvPattern")?.value || "0.4", 10),
+    nectarGuides: $("nectarGuides")?.value || "none",
+    photosynthesisEfficiency: parseFloat($("photosynthesisEfficiency")?.value || "0.6", 10),
+    waterDemand: parseFloat($("waterDemand")?.value || "0.5", 10),
+    growthPace: $("growthPace")?.value || "moderate"
   };
 }
 
@@ -65,12 +92,6 @@ export function createSpeciesFromCurrentDesign(name = null) {
         orientation: "horizontal"
       },
 
-      bud: {
-        shape: "pointed",
-        surface: "smooth",
-        color: p.stemColor
-      },
-
       flower: {
         symmetry: "radial",
         petal_count: p.petalCount,
@@ -81,7 +102,7 @@ export function createSpeciesFromCurrentDesign(name = null) {
         petal_tip_color: p.colorTip,
         tube_length: 0.3 + (1 - p.bloomOpenness) * 0.4,
         opening_angle: p.bloomOpenness,
-        uv_pattern: 0.3
+        uv_pattern: p.uvPattern
       },
 
       reproductive_organs: {
@@ -92,23 +113,23 @@ export function createSpeciesFromCurrentDesign(name = null) {
       },
 
       defenses: {
-        thorn_presence: false,
-        thorn_shape: "straight",
-        thorn_density: 0.0,
-        hairiness: 0.2,
-        surface_texture: "smooth"
+        thorn_presence: p.thornPresence === "true",
+        thorn_shape: p.thornShape,
+        thorn_density: p.thornDensity,
+        hairiness: p.trichomeDensity,
+        surface_texture: p.surfaceTexture
       }
     },
 
     physiology: {
       photosynthesis: {
-        efficiency: 0.6,
+        efficiency: p.photosynthesisEfficiency,
         light_optimum: "partial_shade",
         leaf_longevity: "seasonal"
       },
 
       water: {
-        demand: 0.5,
+        demand: p.waterDemand,
         storage: 0.3,
         wilting_point: 0.25
       },
@@ -116,11 +137,11 @@ export function createSpeciesFromCurrentDesign(name = null) {
       nutrients: {
         nitrogen_demand: 0.5,
         phosphorus_demand: 0.5,
-        special_strategy: "none"
+        special_strategy: p.carnivorousMode === "true" ? "carnivorous" : "none"
       },
 
       growth_strategy: {
-        pace: "moderate",
+        pace: p.growthPace,
         longevity: "perennial",
         allocation: {
           to_leaves: 0.4,
@@ -133,7 +154,7 @@ export function createSpeciesFromCurrentDesign(name = null) {
       stress_responses: {
         drought_response: "leaf_reduce",
         shade_response: "enlarge_leaves",
-        herbivory_response: "chemical"
+        herbivory_response: p.thornPresence === "true" ? "structural" : "chemical"
       }
     },
 
@@ -162,7 +183,7 @@ export function createSpeciesFromCurrentDesign(name = null) {
       flower_longevity: 5,
       pollen_production: Math.min(1, p.pollenAmount / 80),
       nectar_production: 0.6 + p.bloomOpenness * 0.2,
-      scent_profile: "sweet",
+      scent_profile: p.scentProfile,
 
       fruit_type: "capsule",
       seed_count_range: [20 + p.stamenCount, 50 + p.stamenCount * 2],
@@ -187,13 +208,13 @@ export function createSpeciesFromCurrentDesign(name = null) {
       facilitation: [],
 
       herbivore_defense: {
-        chemical: 0.3,
-        structural: 0.3,
+        chemical: p.thornPresence === "true" ? 0.2 : 0.4,
+        structural: p.thornPresence === "true" ? 0.6 : 0.2,
         inducible: false
       },
 
       signaling: {
-        stress_voc: false,
+        stress_voc: p.scentProfile !== "none",
         pollinator_signals: ["visual", "scent"]
       }
     },
@@ -223,6 +244,16 @@ export function createSpeciesFromCurrentDesign(name = null) {
         drought_leaf_factor: 0.8,
         wind_stem_factor: 0.9
       }
+    },
+
+    carnivorous: {
+      enabled: p.carnivorousMode === "true",
+      trap_type: p.trapType,
+      trap_size: p.trapSize,
+      lure_color: p.lureColor,
+      nectar_glow: p.nectarGlow,
+      digestive_fluid_color: p.digestiveFluidColor,
+      capture_speed: p.captureSpeed
     }
   };
 
