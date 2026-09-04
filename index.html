@@ -24,9 +24,8 @@
       transition: all 0.2s;
       margin-bottom: 10px;
     }
-    .export-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    .export-btn:active {
+      transform: scale(0.98);
     }
     .export-hint {
       font-size: 0.85rem;
@@ -137,7 +136,7 @@
       </section>
 
       <section class="control-section">
-        <h2>Stem & leaves</h2>
+        <h2>Stem &amp; leaves</h2>
 
         <div class="field">
           <label for="stemHeight">Stem height <output id="stemHeightValue">2.1</output></label>
@@ -188,7 +187,7 @@
       </section>
 
       <section class="control-section">
-        <h2>Stamens & pollen</h2>
+        <h2>Stamens &amp; pollen</h2>
 
         <div class="field">
           <label for="stamenCount">Stamen count <output id="stamenCountValue">12</output></label>
@@ -386,7 +385,9 @@
         <h2>Design</h2>
 
         <div class="field">
-          <label for="growthSpeed">Growth speed <output id="growthSpeedValue">1.0</output></label>
+          <label for="growthSpeed">
+            Growth speed <output id="growthSpeedValue">1.0</output>
+          </label>
           <input id="growthSpeed" type="range" min="0.2" max="3" step="0.1" value="1">
         </div>
 
@@ -399,11 +400,21 @@
         <input id="loadFile" type="file" accept="application/json,.json" hidden>
       </section>
 
+      <!-- Seamless 1-Click Launch into Living Sim -->
       <section class="control-section export-section">
-        <h2>Export for Simulation</h2>
-        <button id="exportSpeciesBtn" type="button" class="export-btn">📤 Export Species for Simulation</button>
-        <p class="export-hint">Export your flower as a species JSON file, then upload it to the ecosystem simulation to see it evolve and cross-pollinate with other species.</p>
-        <a href="simulation-demo.html" class="simulation-link">🌿 Open Ecosystem Simulation</a>
+        <h2>Living Ecosystem</h2>
+
+        <button id="exportSpeciesBtn" type="button" class="export-btn">
+          🚀 Send to Living Simulation
+        </button>
+
+        <p class="export-hint">
+          Takes your currently designed flower, creates a genetic blueprint, and opens it directly inside the active 3D ecosystem simulator.
+        </p>
+
+        <a href="simulation-demo.html" class="simulation-link">
+          🌿 View Simulation Field
+        </a>
       </section>
     </aside>
   </main>

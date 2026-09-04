@@ -107,6 +107,25 @@ const emberBell = createSpeciesFromTemplate(defaultPlantSpecies, {
 speciesLibrary.add(moonCrest);
 speciesLibrary.add(emberBell);
 
+// Check if a species was sent seamlessly from the flower editor
+try {
+  const activeIncoming = localStorage.getItem('bloom_active_species');
+  if (activeIncoming) {
+    const parsedActive = JSON.parse(activeIncoming);
+    customSpeciesList.push(parsedActive);
+    speciesLibrary.add(parsedActive);
+    localStorage.removeItem('bloom_active_species');
+  }
+  
+  const savedStored = JSON.parse(localStorage.getItem('bloom_custom_species') || '[]');
+  savedStored.forEach(sp => {
+    if (!customSpeciesList.some(s => s.id === sp.id)) {
+      customSpeciesList.push(sp);
+      speciesLibrary.add(sp);
+    }
+  });
+} catch (e) {}
+
 // ===== 3D BUILDERS =====
 
 function createPlantMesh(species, position) {
@@ -416,5 +435,15 @@ function animate() {
 resizeCanvas();
 speciesLibrary.getAll().forEach(s => customSpeciesList.push(s));
 initializeSimulation();
-logEvent("System ready. Founder species loaded.", "info");
+
+// Auto-start if transferred directly from Lab
+const params = new URLSearchParams(window.location.search);
+if (params.get('autoplay') === 'true') {
+  isRunning = true;
+  logEvent("🚀 Plant imported directly! Simulation starting...", "success");
+  simulationStep();
+} else {
+  logEvent("System ready. Founder species loaded.", "info");
+}
+
 animate();

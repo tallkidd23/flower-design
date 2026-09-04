@@ -1,11 +1,10 @@
 // export-integration.js
-// Map detailed Abstract Bloom Lab parameters to species schema
+// Read detailed Abstract Bloom Lab design and send directly to the living simulation
 
 export function readCurrentDesignParams() {
   const $ = (id) => document.getElementById(id);
   
   return {
-    // Basic morphology
     petalCount: parseInt($("petalCount")?.value || "9", 10),
     petalLength: parseFloat($("petalLength")?.value || "1.8", 10),
     petalWidth: parseFloat($("petalWidth")?.value || "0.42", 10),
@@ -64,23 +63,21 @@ export function readCurrentDesignParams() {
 export function createSpeciesFromCurrentDesign(name = null) {
   const p = readCurrentDesignParams();
   
-  const species = {
-    id: `custom-${Date.now()}`,
-    name: name || `Abstract Bloom ${new Date().toLocaleTimeString()}`,
+  return {
+    id: `species-${Date.now()}`,
+    name: name || `Custom Crest ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
     generation: 0,
     parents: [],
-    lineage_notes: "Exported from Abstract Bloom Lab",
+    lineage_notes: "Crafted in Abstract Bloom Lab",
 
     morphology: {
       growth_form: "erect_herb",
-
       stem: {
         height: p.stemHeight,
         thickness: 0.35,
         branching: "sparse",
         flexibility: 0.5
       },
-
       leaves: {
         arrangement: "alternate",
         shape: "lanceolate",
@@ -91,29 +88,31 @@ export function createSpeciesFromCurrentDesign(name = null) {
         pattern: p.leafPattern === "variegated" ? "mottled" : "none",
         orientation: "horizontal"
       },
-
+      bud: {
+        shape: "pointed",
+        surface: "smooth",
+        color: p.stemColor
+      },
       flower: {
         symmetry: "radial",
         petal_count: p.petalCount,
-        petal_shape: p.petalShape === "round" ? "round" : "long",
+        petal_shape: p.petalShape,
         petal_edge: p.petalEdge,
         petal_layers: p.petalLayers,
         petal_base_color: p.colorBase,
         petal_tip_color: p.colorTip,
-        tube_length: 0.3 + (1 - p.bloomOpenness) * 0.4,
+        tube_length: 0.3 + (1 - Math.min(1, p.bloomOpenness)) * 0.4,
         opening_angle: p.bloomOpenness,
         uv_pattern: p.uvPattern
       },
-
       reproductive_organs: {
         stamen_count: p.stamenCount,
         stamen_length: p.stamenHeight,
         stigma_shape: "knob",
         stigma_height: 0.5
       },
-
       defenses: {
-        thorn_presence: p.thornPresence === "true",
+        thorn_presence: p.thornPresence === "true" || p.thornPresence === true,
         thorn_shape: p.thornShape,
         thorn_density: p.thornDensity,
         hairiness: p.trichomeDensity,
@@ -127,19 +126,16 @@ export function createSpeciesFromCurrentDesign(name = null) {
         light_optimum: "partial_shade",
         leaf_longevity: "seasonal"
       },
-
       water: {
         demand: p.waterDemand,
         storage: 0.3,
         wilting_point: 0.25
       },
-
       nutrients: {
         nitrogen_demand: 0.5,
         phosphorus_demand: 0.5,
         special_strategy: p.carnivorousMode === "true" ? "carnivorous" : "none"
       },
-
       growth_strategy: {
         pace: p.growthPace,
         longevity: "perennial",
@@ -150,7 +146,6 @@ export function createSpeciesFromCurrentDesign(name = null) {
           to_reproduction: 0.1
         }
       },
-
       stress_responses: {
         drought_response: "leaf_reduce",
         shade_response: "enlarge_leaves",
@@ -162,10 +157,7 @@ export function createSpeciesFromCurrentDesign(name = null) {
       architecture: "fibrous",
       depth: 0.5,
       spread: 0.6,
-      symbionts: {
-        mycorrhizae: true,
-        nitrogen_fixers: false
-      },
+      symbionts: { mycorrhizae: true, nitrogen_fixers: false },
       clonal_spread: false
     },
 
@@ -173,18 +165,15 @@ export function createSpeciesFromCurrentDesign(name = null) {
       mode: "sexual",
       pollination_syndrome: "generalist",
       self_compatible: true,
-
       flowering_time: {
-        start_day: 60,
-        duration_days: 30,
+        start_day: 0,
+        duration_days: 90,
         season: "late_spring"
       },
-
-      flower_longevity: 5,
-      pollen_production: Math.min(1, p.pollenAmount / 80),
-      nectar_production: 0.6 + p.bloomOpenness * 0.2,
+      flower_longevity: 10,
+      pollen_production: Math.min(1, p.pollenAmount / 60),
+      nectar_production: 0.6 + p.bloomOpenness * 0.25,
       scent_profile: p.scentProfile,
-
       fruit_type: "capsule",
       seed_count_range: [20 + p.stamenCount, 50 + p.stamenCount * 2],
       seed_size: "small",
@@ -197,22 +186,14 @@ export function createSpeciesFromCurrentDesign(name = null) {
       light_niche: "partial_shade",
       water_niche: "moderate",
       soil_niche: "well_drained",
-
-      temperature_range: {
-        min: 5,
-        opt: 20,
-        max: 30
-      },
-
+      temperature_range: { min: 5, opt: 20, max: 30 },
       competition_style: "moderate",
       facilitation: [],
-
       herbivore_defense: {
         chemical: p.thornPresence === "true" ? 0.2 : 0.4,
         structural: p.thornPresence === "true" ? 0.6 : 0.2,
         inducible: false
       },
-
       signaling: {
         stress_voc: p.scentProfile !== "none",
         pollinator_signals: ["visual", "scent"]
@@ -220,30 +201,10 @@ export function createSpeciesFromCurrentDesign(name = null) {
     },
 
     development: {
-      juvenile_form: {
-        leaf_shape: "rounded",
-        leaf_size: 0.5,
-        stem_height_factor: 0.6,
-        flowers: false
-      },
-
-      adult_form: {
-        leaf_shape: "lanceolate",
-        leaf_size: 1.0,
-        stem_height_factor: 1.0,
-        flowers: true
-      },
-
-      senescence: {
-        onset_age_years: 5,
-        traits: ["leaf_yellowing", "reduced_bloom"]
-      },
-
-      plasticity: {
-        shade_leaf_factor: 1.2,
-        drought_leaf_factor: 0.8,
-        wind_stem_factor: 0.9
-      }
+      juvenile_form: { leaf_shape: "rounded", leaf_size: 0.5, stem_height_factor: 0.6, flowers: false },
+      adult_form: { leaf_shape: "lanceolate", leaf_size: 1.0, stem_height_factor: 1.0, flowers: true },
+      senescence: { onset_age_years: 5, traits: ["leaf_yellowing", "reduced_bloom"] },
+      plasticity: { shade_leaf_factor: 1.2, drought_leaf_factor: 0.8, wind_stem_factor: 0.9 }
     },
 
     carnivorous: {
@@ -256,34 +217,45 @@ export function createSpeciesFromCurrentDesign(name = null) {
       capture_speed: p.captureSpeed
     }
   };
-
-  return species;
 }
 
-export function downloadCurrentDesignAsSpecies() {
+export function exportAndLaunchSimulation() {
   const species = createSpeciesFromCurrentDesign();
-  const json = JSON.stringify(species, null, 2);
-  const blob = new Blob([json], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${species.name.replace(/\s+/g, "-").toLowerCase()}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  
+  // Store directly in localStorage for instant seamless pickup
+  try {
+    const existing = JSON.parse(localStorage.getItem('bloom_custom_species') || '[]');
+    existing.push(species);
+    localStorage.setItem('bloom_custom_species', JSON.stringify(existing));
+    
+    // Also save as the active direct-transfer species
+    localStorage.setItem('bloom_active_species', JSON.stringify(species));
+  } catch (e) {
+    console.warn("Storage error:", e);
+  }
 
-  alert(
-    `Exported "${species.name}" as ${a.download}\n\n` +
-    `Upload this file to simulation-demo.html to use it in the ecosystem!`
-  );
+  // Also trigger file download as backup
+  try {
+    const blob = new Blob([JSON.stringify(species, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${species.name.replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {}
+
+  // Automatically navigate right into the living simulation
+  window.location.href = "simulation-demo.html?autoplay=true";
 }
 
 export function initializeExportButton() {
   const exportBtn = document.getElementById("exportSpeciesBtn");
   if (exportBtn) {
     exportBtn.addEventListener("click", () => {
-      downloadCurrentDesignAsSpecies();
+      exportAndLaunchSimulation();
     });
   }
 }
