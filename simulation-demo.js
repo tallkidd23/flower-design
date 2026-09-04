@@ -1,5 +1,5 @@
 // simulation-demo.js
-// Standalone ecosystem simulation demo with canvas renderer
+// Standalone ecosystem simulation demo with canvas renderer and custom species support
 
 import {
   defaultPlantSpecies,
@@ -32,12 +32,16 @@ import {
   processGerminatedSeeds
 } from './simulation/seed/index.js';
 
+import {
+  loadSpeciesFromFile,
+  createSpeciesLibrary
+} from './simulation/species-loader.js';
+
 // ===== CANVAS SETUP =====
 
 const canvas = document.getElementById('fieldCanvas');
 const ctx = canvas.getContext('2d');
 
-// Set canvas size
 function resizeCanvas() {
   const rect = canvas.getBoundingClientRect();
   canvas.width = rect.width;
@@ -55,9 +59,13 @@ let currentDay = 0;
 let isRunning = false;
 let animationId = null;
 let totalPollinations = 0;
+let customSpeciesList = [];
 
-// ===== CREATE SPECIES =====
+// ===== SPECIES LIBRARY =====
 
+const speciesLibrary = createSpeciesLibrary();
+
+// Default species
 const moonCrest = createSpeciesFromTemplate(defaultPlantSpecies, {
   id: "moon-crest-001",
   name: "Moon Crest",
@@ -110,6 +118,9 @@ const emberBell = createSpeciesFromTemplate(defaultPlantSpecies, {
   }
 });
 
+speciesLibrary.add(moonCrest);
+speciesLibrary.add(emberBell);
+
 // ===== INITIALIZE =====
 
 function initializeSimulation() {
@@ -135,20 +146,15 @@ function initializeSimulation() {
   currentDay = 0;
   totalPollinations = 0;
 
-  // Add plants (multiple individuals)
-  for (let i = 0; i < 3; i++) {
-    addPlantToField(field, moonCrest, createPlantState(moonCrest.id), {
-      x: 20 + Math.random() * 30,
-      y: 30 + Math.random() * 40
-    });
-  }
-
-  for (let i = 0; i < 3; i++) {
-    addPlantToField(field, emberBell, createPlantState(emberBell.id), {
-      x: 60 + Math.random() * 30,
-      y: 30 + Math.random() * 40
-    });
-  }
+  // Add plants from species library
+  customSpeciesList.forEach(species => {
+    for (let i = 0; i < 2; i++) {
+      addPlantToField(field, species, createPlantState(species.id), {
+        x: 20 + Math.random() * 60,
+        y: 30 + Math.random() * 40
+      });
+    }
+  });
 
   // Add pollinators
   addPollinatorToField(field, pollinatorPresets.moth, { x: 50, y: 50 });
@@ -157,13 +163,13 @@ function initializeSimulation() {
 
   logEvent("Simulation initialized", "info");
   updateStats();
+  updateLegend();
   render();
 }
 
 // ===== RENDERING =====
 
 function render() {
-  // Clear canvas
   ctx.fillStyle = '#f8f9fa';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -191,13 +197,11 @@ function render() {
     const x = (plant.position.x / field.dimensions.width) * canvas.width;
     const y = (plant.position.y / field.dimensions.height) * canvas.height;
 
-    // Check if in bloom
     const inBloom = currentDay >= plant.species.reproduction.flowering_time.start_day &&
                     currentDay <= plant.species.reproduction.flowering_time.start_day +
                     plant.species.reproduction.flowering_time.duration_days;
 
     if (inBloom) {
-      // Draw flower
       ctx.beginPath();
       ctx.arc(x, y, 12, 0, Math.PI * 2);
       ctx.fillStyle = plant.species.morphology.flower.petal_base_color;
@@ -206,21 +210,18 @@ function render() {
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Bloom indicator
       ctx.beginPath();
       ctx.arc(x, y, 15, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
       ctx.lineWidth = 1;
       ctx.stroke();
     } else {
-      // Draw vegetative plant
       ctx.beginPath();
       ctx.arc(x, y, 8, 0, Math.PI * 2);
       ctx.fillStyle = '#27ae60';
       ctx.fill();
     }
 
-    // Plant label
     ctx.fillStyle = '#333';
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'center';
@@ -232,13 +233,11 @@ function render() {
     const x = (pollinator.position.x / field.dimensions.width) * canvas.width;
     const y = (pollinator.position.y / field.dimensions.height) * canvas.height;
 
-    // Body
     ctx.beginPath();
     ctx.arc(x, y, 6, 0, Math.PI * 2);
     ctx.fillStyle = pollinator.species.body.color;
     ctx.fill();
 
-    // Wings (simple ovals)
     ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
     ctx.beginPath();
     ctx.ellipse(x - 5, y - 3, 4, 2, Math.PI / 4, 0, Math.PI * 2);
@@ -247,7 +246,6 @@ function render() {
     ctx.ellipse(x + 5, y - 3, 4, 2, -Math.PI / 4, 0, Math.PI * 2);
     ctx.fill();
 
-    // Pollen indicator
     if (pollinator.pollen) {
       ctx.beginPath();
       ctx.arc(x, y, 8, 0, Math.PI * 2);
@@ -257,7 +255,7 @@ function render() {
     }
   });
 
-  // Draw seeds (germinated)
+  // Draw seeds
   seedManager.germinatedSeeds.forEach(seed => {
     if (!seed.planted) {
       const x = (seed.position.x / field.dimensions.width) * canvas.width;
@@ -284,48 +282,36 @@ function simulationStep() {
   currentDay += deltaTime * 0.1;
   field.simulation.current_day = currentDay;
 
-  // Get active entities
   const plantsInBloom = getPlantsInBloom(field, currentDay);
   const timeOfDay = (currentDay % 24);
   const activePollinators = getPollinatorsActive(field, timeOfDay);
 
-  // Process each pollinator
   activePollinators.forEach(pollinator => {
-    // Move
     simulatePollinatorMovement(pollinator, field, deltaTime);
 
-    // Find target flower
     const targetPlant = findNearestFloweringPlant(pollinator, plantsInBloom, currentDay);
 
     if (targetPlant) {
-      // Visit
       const result = pollinatorVisit(pollinator, targetPlant, field, currentDay);
 
       if (result.action === "pollinated" && result.seed) {
-        // Store seed
         addSeeds(seedManager, result.seed);
         totalPollinations++;
-        logEvent(`Day ${Math.floor(currentDay)}: ${pollinator.species.name} pollinated ${targetPlant.species.name}`, "success");
+        logEvent(`Day ${Math.floor(currentDay)}: ${pollinator.species.name} → ${targetPlant.species.name} × ${result.seed.parentB.substring(0, 8)}`, "success");
       }
     }
   });
 
-  // Process seed dormancy
   processSeedDormancy(seedManager, currentDay, field.environment);
 
-  // Germinate seeds
   const newPlants = processGerminatedSeeds(seedManager, field);
   if (newPlants.length > 0) {
     logEvent(`Day ${Math.floor(currentDay)}: ${newPlants.length} new plants germinated!`, "info");
   }
 
-  // Update stats
   updateStats();
-
-  // Render
   render();
 
-  // Continue
   if (currentDay < field.environment.season_length_days) {
     animationId = requestAnimationFrame(simulationStep);
   } else {
@@ -346,6 +332,39 @@ function updateStats() {
   document.getElementById('pollinationsStat').textContent = totalPollinations;
 }
 
+function updateLegend() {
+  const container = document.getElementById('legendContainer');
+  container.innerHTML = '';
+
+  customSpeciesList.forEach(species => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `
+      <div class="legend-dot" style="background: ${species.morphology.flower.petal_base_color};"></div>
+      <span>${species.name}</span>
+    `;
+    container.appendChild(item);
+  });
+}
+
+function updateSpeciesList() {
+  const container = document.getElementById('speciesList');
+  container.innerHTML = '';
+
+  customSpeciesList.forEach(species => {
+    const item = document.createElement('div');
+    item.className = 'species-item';
+    item.innerHTML = `
+      <div class="species-color" style="background: ${species.morphology.flower.petal_base_color};"></div>
+      <div class="species-info">
+        <div class="species-name">${species.name}</div>
+        <div class="species-count">${species.morphology.flower.petal_count} petals</div>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+}
+
 function logEvent(message, type = "info") {
   const logContainer = document.getElementById('eventLog');
   const entry = document.createElement('div');
@@ -354,6 +373,27 @@ function logEvent(message, type = "info") {
   logContainer.appendChild(entry);
   logContainer.scrollTop = logContainer.scrollHeight;
 }
+
+// ===== FILE UPLOAD HANDLER =====
+
+document.getElementById('speciesFileInput').addEventListener('change', async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    const species = await loadSpeciesFromFile(file);
+    customSpeciesList.push(species);
+    speciesLibrary.add(species);
+    logEvent(`Loaded species: ${species.name}`, "success");
+    updateSpeciesList();
+    updateLegend();
+    initializeSimulation();
+  } catch (error) {
+    logEvent(`Error loading species: ${error.message}`, "warning");
+  }
+
+  event.target.value = '';
+});
 
 // ===== CONTROLS =====
 
@@ -378,8 +418,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   if (animationId) {
     cancelAnimationFrame(animationId);
   }
-  logContainer = document.getElementById('eventLog');
-  logContainer.innerHTML = '';
+  document.getElementById('eventLog').innerHTML = '';
   initializeSimulation();
   logEvent("Simulation reset", "info");
 });
@@ -390,6 +429,10 @@ document.getElementById('clearLogBtn').addEventListener('click', () => {
 
 // ===== INITIALIZE ON LOAD =====
 
+// Start with default species
+speciesLibrary.getAll().forEach(s => customSpeciesList.push(s));
 initializeSimulation();
+updateSpeciesList();
 logEvent("Welcome to the Ecosystem Demo!", "info");
+logEvent("Upload custom species JSON to add your own plants", "info");
 logEvent("Press Start to begin the simulation", "info");
