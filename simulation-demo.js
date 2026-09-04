@@ -1,32 +1,10 @@
 import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
-import {
-  defaultPlantSpecies,
-  createSpeciesFromTemplate,
-  createPlantState
-} from './simulation/plant/index.js';
+import { defaultPlantSpecies, createSpeciesFromTemplate, createPlantState } from './simulation/plant/index.js';
 import { pollinatorPresets } from './simulation/pollinator/index.js';
-import {
-  createFieldConfig,
-  addPlantToField,
-  addPollinatorToField,
-  getPlantsInBloom,
-  getPollinatorsActive
-} from './simulation/field/index.js';
-import {
-  pollinatorVisit,
-  findNearestFloweringPlant,
-  simulatePollinatorMovement
-} from './simulation/pollination/index.js';
-import {
-  createSeedManager,
-  addSeeds,
-  processSeedDormancy,
-  processGerminatedSeeds
-} from './simulation/seed/index.js';
-import {
-  loadSpeciesFromFile,
-  createSpeciesLibrary
-} from './simulation/species-loader.js';
+import { createFieldConfig, addPlantToField, addPollinatorToField, getPlantsInBloom, getPollinatorsActive } from './simulation/field/index.js';
+import { pollinatorVisit, findNearestFloweringPlant, simulatePollinatorMovement } from './simulation/pollination/index.js';
+import { createSeedManager, addSeeds, processSeedDormancy, processGerminatedSeeds } from './simulation/seed/index.js';
+import { loadSpeciesFromFile, createSpeciesLibrary } from './simulation/species-loader.js';
 
 // ===== THREE.JS SETUP =====
 
@@ -44,7 +22,6 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 
-// Lighting
 scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
 keyLight.position.set(20, 40, 20);
@@ -53,7 +30,6 @@ const rimLight = new THREE.DirectionalLight(0x9d7cff, 0.5);
 rimLight.position.set(-30, 20, -30);
 scene.add(rimLight);
 
-// Ground
 const groundGeo = new THREE.PlaneGeometry(200, 200);
 const groundMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.9 });
 const ground = new THREE.Mesh(groundGeo, groundMat);
@@ -61,7 +37,7 @@ ground.rotation.x = -Math.PI / 2;
 ground.position.y = -0.1;
 scene.add(ground);
 
-// ===== SIMULATION STATE =====
+// ===== STATE =====
 
 let field = null;
 let seedManager = null;
@@ -74,7 +50,7 @@ const speciesLibrary = createSpeciesLibrary();
 const plantMeshes = new Map();
 const pollinatorMeshes = new Map();
 
-// ===== SPECIES =====
+// ===== DEFAULT SPECIES =====
 
 const moonCrest = createSpeciesFromTemplate(defaultPlantSpecies, {
   id: "moon-crest-001",
@@ -123,37 +99,18 @@ const emberBell = createSpeciesFromTemplate(defaultPlantSpecies, {
 speciesLibrary.add(moonCrest);
 speciesLibrary.add(emberBell);
 
-// ===== PLANT RENDERING (Simplified but matches editor style) =====
+// ===== RENDERING =====
 
 function createPlantMesh(species, position) {
   const group = new THREE.Group();
-  
-  // Stem
   const stemHeight = species.morphology.stem.height * 3;
+  
   const stemGeo = new THREE.CylinderGeometry(0.15, 0.25, stemHeight, 8);
-  const stemMat = new THREE.MeshStandardMaterial({ color: species.morphology.defenses.thorn_presence ? 0x2d5016 : 0x28643a, roughness: 0.8 });
+  const stemMat = new THREE.MeshStandardMaterial({ color: 0x28643a, roughness: 0.8 });
   const stem = new THREE.Mesh(stemGeo, stemMat);
   stem.position.y = stemHeight / 2;
   group.add(stem);
   
-  // Leaves
-  const leafCount = species.morphology.leaves.arrangement === "basal_rosette" ? 0 : 6;
-  for (let i = 0; i < leafCount; i++) {
-    const angle = (i / leafCount) * Math.PI * 2;
-    const leafGeo = new THREE.SphereGeometry(0.8, 8, 6);
-    const leafMat = new THREE.MeshStandardMaterial({ 
-      color: species.morphology.leaves.variegation ? species.morphology.leaves.pattern === "mottled" ? 0x1b5b35 : 0xd2e6ab : 0x1b5b35, 
-      roughness: 0.7 
-    });
-    const leaf = new THREE.Mesh(leafGeo, leafMat);
-    leaf.position.set(Math.cos(angle) * 1.2, stemHeight * 0.4, Math.sin(angle) * 1.2);
-    leaf.scale.set(1, 0.3, 0.5);
-    leaf.rotation.x = Math.PI / 2;
-    leaf.rotation.z = angle;
-    group.add(leaf);
-  }
-  
-  // Flower
   const flowerGroup = new THREE.Group();
   const petalCount = species.morphology.flower.petal_count;
   const petalColor = new THREE.Color(species.morphology.flower.petal_base_color);
@@ -161,11 +118,7 @@ function createPlantMesh(species, position) {
   for (let i = 0; i < petalCount; i++) {
     const angle = (i / petalCount) * Math.PI * 2;
     const petalGeo = new THREE.SphereGeometry(0.6, 8, 6);
-    const petalMat = new THREE.MeshStandardMaterial({ 
-      color: petalColor, 
-      roughness: 0.4,
-      emissive: petalColor.clone().multiplyScalar(0.1)
-    });
+    const petalMat = new THREE.MeshStandardMaterial({ color: petalColor, roughness: 0.4, emissive: petalColor.clone().multiplyScalar(0.1) });
     const petal = new THREE.Mesh(petalGeo, petalMat);
     petal.position.set(Math.cos(angle) * 0.8, stemHeight + 0.3, Math.sin(angle) * 0.8);
     petal.scale.set(0.4, 1, 0.3);
@@ -174,48 +127,25 @@ function createPlantMesh(species, position) {
     flowerGroup.add(petal);
   }
   
-  // Flower center
   const centerGeo = new THREE.SphereGeometry(0.3, 8, 6);
   const centerMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.5 });
   const center = new THREE.Mesh(centerGeo, centerMat);
   center.position.y = stemHeight + 0.5;
   flowerGroup.add(center);
-  
   group.add(flowerGroup);
-  
-  // Thorns
-  if (species.morphology.defenses.thorn_presence) {
-    const thornColor = new THREE.Color(species.morphology.defenses.thorn_color || "#8b4513");
-    for (let i = 0; i < 8; i++) {
-      const thornGeo = new THREE.ConeGeometry(0.05, 0.3, 6);
-      const thornMat = new THREE.MeshStandardMaterial({ color: thornColor, roughness: 0.6 });
-      const thorn = new THREE.Mesh(thornGeo, thornMat);
-      const angle = (i / 8) * Math.PI * 2;
-      thorn.position.set(Math.cos(angle) * 0.3, stemHeight * 0.5, Math.sin(angle) * 0.3);
-      thorn.rotation.x = Math.PI / 2 - 0.3;
-      thorn.rotation.z = angle;
-      group.add(thorn);
-    }
-  }
   
   group.position.set(position.x, 0, position.y);
   scene.add(group);
-  
   return group;
 }
 
-// ===== POLLINATOR RENDERING =====
-
 function createPollinatorMesh(species, position) {
   const group = new THREE.Group();
-  
-  // Body
   const bodyGeo = new THREE.SphereGeometry(0.4, 8, 6);
   const bodyMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(species.body.color), roughness: 0.5 });
   const body = new THREE.Mesh(bodyGeo, bodyMat);
   group.add(body);
   
-  // Wings
   const wingGeo = new THREE.SphereGeometry(0.5, 8, 6);
   const wingMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, transparent: true, opacity: 0.6 });
   for (let side of [-1, 1]) {
@@ -228,14 +158,12 @@ function createPollinatorMesh(species, position) {
   
   group.position.set(position.x, 5, position.y);
   scene.add(group);
-  
   return group;
 }
 
-// ===== INITIALIZE =====
+// ===== INIT =====
 
 function initializeSimulation() {
-  // Clear existing meshes
   plantMeshes.forEach(mesh => scene.remove(mesh));
   pollinatorMeshes.forEach(mesh => scene.remove(mesh));
   plantMeshes.clear();
@@ -244,21 +172,13 @@ function initializeSimulation() {
   field = createFieldConfig({
     name: "Demo Meadow",
     dimensions: { width: 100, height: 100 },
-    environment: {
-      season_length_days: 120,
-      weather: "sunny",
-      soil: "well_drained",
-      temperature: 22,
-      mutation_rate: 0.03,
-      crossing_rules: "compatible_species"
-    }
+    environment: { season_length_days: 120, weather: "sunny", soil: "well_drained", temperature: 22, mutation_rate: 0.03, crossing_rules: "compatible_species" }
   });
   
   seedManager = createSeedManager();
   currentDay = 0;
   totalPollinations = 0;
   
-  // Add plants
   customSpeciesList.forEach(species => {
     for (let i = 0; i < 3; i++) {
       const pos = { x: 20 + Math.random() * 60, y: 30 + Math.random() * 40 };
@@ -268,12 +188,11 @@ function initializeSimulation() {
     }
   });
   
-  // Add pollinators
   [pollinatorPresets.moth, pollinatorPresets.butterfly, pollinatorPresets.bee].forEach((preset, i) => {
     const pos = { x: 40 + i * 10, y: 40 };
     const pollinator = addPollinatorToField(field, preset, pos);
     const mesh = createPollinatorMesh(preset, pos);
-    pollinatorMeshes.set(pollinator.id, mesh);
+    pollinatorMeshes.set(pollinator.species.id, mesh);
   });
   
   logEvent("Simulation initialized", "info");
@@ -281,7 +200,7 @@ function initializeSimulation() {
   updateLegend();
 }
 
-// ===== SIMULATION LOOP =====
+// ===== LOOP =====
 
 const deltaTime = 1;
 
@@ -289,7 +208,6 @@ function simulationStep() {
   if (!isRunning) return;
   
   currentDay += deltaTime * 0.1;
-  
   const plantsInBloom = getPlantsInBloom(field, currentDay);
   const timeOfDay = currentDay % 24;
   const activePollinators = getPollinatorsActive(field, timeOfDay);
@@ -315,9 +233,7 @@ function simulationStep() {
   
   processSeedDormancy(seedManager, currentDay, field.environment);
   const newPlants = processGerminatedSeeds(seedManager, field);
-  if (newPlants.length > 0) {
-    logEvent(`Day ${Math.floor(currentDay)}: ${newPlants.length} new plants!`, "info");
-  }
+  if (newPlants.length > 0) logEvent(`Day ${Math.floor(currentDay)}: ${newPlants.length} new plants!`, "info");
   
   updateStats();
   
@@ -380,12 +296,12 @@ document.getElementById('speciesFileInput').addEventListener('change', async (ev
     const species = await loadSpeciesFromFile(file);
     customSpeciesList.push(species);
     speciesLibrary.add(species);
-    logEvent(`Loaded: ${species.name}`, "success");
+    logEvent(`✓ Loaded: ${species.name}`, "success");
     updateSpeciesList();
     updateLegend();
     initializeSimulation();
   } catch (error) {
-    logEvent(`Error: ${error.message}`, "warning");
+    logEvent(`✗ Error: ${error.message}`, "warning");
   }
   
   event.target.value = '';
@@ -415,28 +331,19 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   logEvent("Reset", "info");
 });
 
-// ===== RENDER LOOP =====
+// ===== ANIMATE =====
 
 function animate() {
   requestAnimationFrame(animate);
-  
-  // Slow rotation
-  plantMeshes.forEach(mesh => {
-    mesh.rotation.y += 0.002;
-  });
-  
+  plantMeshes.forEach(mesh => { mesh.rotation.y += 0.002; });
   renderer.render(scene, camera);
 }
-
-// ===== RESIZE =====
 
 window.addEventListener('resize', () => {
   camera.aspect = container.clientWidth / container.clientHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(container.clientWidth, container.clientHeight);
 });
-
-// ===== INIT =====
 
 speciesLibrary.getAll().forEach(s => customSpeciesList.push(s));
 initializeSimulation();
