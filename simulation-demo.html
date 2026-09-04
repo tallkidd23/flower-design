@@ -71,16 +71,6 @@
     .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,0.4); }
     .btn-secondary { background: rgba(255,255,255,0.1); color: white; }
     .btn-secondary:hover { background: rgba(255,255,255,0.2); }
-    .file-input-wrapper {
-      position: relative;
-      overflow: hidden;
-      width: 100%;
-      margin-bottom: 12px;
-    }
-    .file-input-wrapper input[type=file] {
-      position: absolute;
-      left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
-    }
     .file-input-btn {
       display: block;
       width: 100%;
@@ -92,8 +82,10 @@
       cursor: pointer;
       transition: all 0.2s;
       color: #aaa;
+      margin-bottom: 12px;
     }
     .file-input-btn:hover { background: rgba(255,255,255,0.15); border-color: #667eea; color: #fff; }
+    #fileInput { display: none; }
     .species-list { max-height: 200px; overflow-y: auto; }
     .species-item {
       display: flex;
@@ -126,16 +118,6 @@
     .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
     .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
-    #overlay {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      background: rgba(0,0,0,0.7);
-      padding: 16px;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      pointer-events: none;
-    }
   </style>
 </head>
 <body>
@@ -153,10 +135,8 @@
 
       <div class="panel">
         <h2>Load Species</h2>
-        <div class="file-input-wrapper">
-          <div class="file-input-btn">📁 Upload species JSON</div>
-          <input type="file" id="speciesFileInput" accept=".json,application/json">
-        </div>
+        <label for="fileInput" class="file-input-btn">📁 Upload species JSON</label>
+        <input type="file" id="fileInput" accept=".json,application/json">
         <div class="species-list" id="speciesList"></div>
       </div>
 

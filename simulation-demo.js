@@ -288,7 +288,7 @@ function logEvent(message, type = "info") {
 
 // ===== FILE UPLOAD =====
 
-document.getElementById('speciesFileInput').addEventListener('change', async (event) => {
+document.getElementById('fileInput').addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
   
