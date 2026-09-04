@@ -588,6 +588,7 @@ function buildFlower() {
     flowerGroup.position.y = 50;
 }
 
+
 /**
  * Update from controls
  */
