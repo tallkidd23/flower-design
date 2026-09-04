@@ -9,10 +9,9 @@ scene.background = new THREE.Color(0x020204);
 
 const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
 
-// Spherical Orbit Camera Setup (Horizontal Yaw + Vertical Pitch + Zoom)
 let cameraRadius = 6.4;
-let cameraPitch = 0.35; // Vertical tilt angle (radians above ground)
-let cameraYaw = 0;      // Horizontal rotation
+let cameraPitch = 0.35;
+let cameraYaw = 0;
 let targetLookY = 2.0;
 
 function updateCameraPosition() {
@@ -27,33 +26,192 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerP
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.5));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.18;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 container.appendChild(renderer.domElement);
 
-// Enhanced Lighting for Botanical Depth
+// Enhanced Botanical Lighting
 scene.add(new THREE.AmbientLight(0xffffff, 0.65));
 
-const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
-keyLight.position.set(4.5, 7.5, 4.5);
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.45);
+keyLight.position.set(4.5, 8.0, 4.5);
 keyLight.castShadow = true;
 keyLight.shadow.mapSize.width = 1024;
 keyLight.shadow.mapSize.height = 1024;
 keyLight.shadow.bias = -0.0005;
 scene.add(keyLight);
 
-const rimLight = new THREE.DirectionalLight(0x9d7cff, 0.85);
-rimLight.position.set(-5, 4, -4.5);
+const rimLight = new THREE.DirectionalLight(0xa884ff, 0.9);
+rimLight.position.set(-5, 4.5, -4.5);
 scene.add(rimLight);
 
-const fillLight = new THREE.DirectionalLight(0x6ee7b7, 0.4);
-fillLight.position.set(0, -3, 3);
+const fillLight = new THREE.DirectionalLight(0x6ee7b7, 0.45);
+fillLight.position.set(0, -3, 3.5);
 scene.add(fillLight);
 
-// Flower Group
 const flower = new THREE.Group();
 scene.add(flower);
+
+// ===== PROCEDURAL BOTANICAL TEXTURE GENERATORS =====
+
+function createPetalTexture(baseHex, tipHex, uvStrength = 0.4, patternType = "veins_spots") {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+
+  // Gradient Color Bleed (Base to Tip with non-linear blend)
+  const grad = ctx.createLinearGradient(0, 0, 0, 512);
+  grad.addColorStop(0, tipHex);
+  grad.addColorStop(0.55, baseHex);
+  grad.addColorStop(1, baseHex);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Micro-Vein Striations
+  ctx.lineWidth = 1.0;
+  for (let i = -16; i <= 16; i++) {
+    ctx.beginPath();
+    const startX = 256 + i * 14;
+    ctx.moveTo(startX, 512);
+    ctx.bezierCurveTo(
+      startX + i * 3, 300,
+      256 + i * 18, 120,
+      256 + i * 12, 0
+    );
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.12 + Math.abs(i) * 0.004})`;
+    ctx.stroke();
+
+    // Dark secondary vein for depth
+    ctx.beginPath();
+    ctx.moveTo(startX + 1, 512);
+    ctx.bezierCurveTo(
+      startX + i * 3 + 1, 300,
+      256 + i * 18 + 1, 120,
+      256 + i * 12 + 1, 0
+    );
+    ctx.strokeStyle = `rgba(0, 0, 0, 0.15)`;
+    ctx.stroke();
+  }
+
+  // Botanical Freckles / Pigment Spots (Near base & throat)
+  for (let s = 0; s < 180; s++) {
+    const spotX = 256 + (Math.random() - 0.5) * 340 * (s / 180);
+    const spotY = 220 + Math.random() * 280;
+    const r = 1.0 + Math.random() * 2.8;
+
+    ctx.beginPath();
+    ctx.arc(spotX, spotY, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(60, 0, 30, ${0.35 + Math.random() * 0.45})`;
+    ctx.fill();
+
+    // Halos around prominent freckles
+    if (r > 2.0) {
+      ctx.beginPath();
+      ctx.arc(spotX, spotY, r * 1.8, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 220, 240, 0.25)`;
+      ctx.fill();
+    }
+  }
+
+  // UV Nectar Guide Rays
+  if (uvStrength > 0.05) {
+    for (let u = 0; u < 9; u++) {
+      ctx.beginPath();
+      ctx.moveTo(256, 512);
+      ctx.lineTo(256 + (u - 4) * 32, 280);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${uvStrength * 0.35})`;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  return texture;
+}
+
+function createLeafTexture(leafHex, varHex, pattern = "variegated") {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+
+  // Base Leaf Color
+  ctx.fillStyle = leafHex;
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Variegation Margin / Mottling
+  if (pattern === "variegated") {
+    ctx.fillStyle = varHex;
+    // Edge marbled bleeding
+    for (let x = 0; x < 512; x += 12) {
+      const marginWidth = 35 + Math.sin(x * 0.05) * 20 + Math.random() * 15;
+      ctx.fillRect(x, 0, 14, marginWidth);
+      ctx.fillRect(x, 512 - marginWidth, 14, marginWidth);
+    }
+  }
+
+  // Central Midrib
+  ctx.beginPath();
+  ctx.moveTo(0, 256);
+  ctx.lineTo(512, 256);
+  ctx.strokeStyle = pattern === "variegated" ? varHex : "rgba(255,255,255,0.45)";
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  // Lateral Secondary Veins (Pinnate Venation)
+  for (let x = 30; x < 500; x += 32) {
+    for (let side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(x, 256);
+      ctx.quadraticCurveTo(x + 40, 256 + side * 70, x + 60, 256 + side * 220);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      // Shadowed relief beside vein
+      ctx.beginPath();
+      ctx.moveTo(x, 258);
+      ctx.quadraticCurveTo(x + 40, 258 + side * 70, x + 60, 258 + side * 220);
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.25)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  return texture;
+}
+
+function createStemTexture(stemHex) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = stemHex;
+  ctx.fillRect(0, 0, 256, 512);
+
+  // Vertical Bark / Vascular Striations
+  for (let x = 0; x < 256; x += 8) {
+    const tone = (Math.random() - 0.5) * 40;
+    ctx.fillStyle = `rgba(${tone > 0 ? 255 : 0}, ${tone > 0 ? 255 : 0}, ${tone > 0 ? 255 : 0}, ${Math.abs(tone) / 255 * 0.4})`;
+    ctx.fillRect(x, 0, 4 + Math.random() * 3, 512);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(2, 1);
+  return texture;
+}
+
+// ===== STATE & PARAMS =====
 
 const totalDays = 100;
 let day = 0;
@@ -74,13 +232,10 @@ const ids = [
   "leafEdge", "leafPattern", "leafColor", "variegationColor",
   "stamenCount", "stamenHeight", "filamentColor", "antherColor",
   "pollenAmount", "pollenSize", "pollenColor", "growthSpeed",
-  // Defenses
   "thornPresence", "thornDensity", "thornLength", "thornShape", "thornColor",
   "trichomeDensity", "surfaceTexture",
-  // Carnivorous
   "carnivorousMode", "trapType", "trapSize", "lureColor", "nectarGlow",
   "digestiveFluidColor", "captureSpeed",
-  // Advanced physiology
   "scentProfile", "uvPattern", "nectarGuides",
   "photosynthesisEfficiency", "waterDemand", "growthPace"
 ];
@@ -144,8 +299,15 @@ function clearFlower() {
   for (const mesh of flowerMeshes) {
     flower.remove(mesh);
     mesh.geometry?.dispose();
-    if (Array.isArray(mesh.material)) mesh.material.forEach((m) => m.dispose());
-    else mesh.material?.dispose();
+    if (Array.isArray(mesh.material)) {
+      mesh.material.forEach((m) => {
+        m.map?.dispose();
+        m.dispose();
+      });
+    } else {
+      mesh.material?.map?.dispose();
+      mesh.material?.dispose();
+    }
   }
   flowerMeshes = [];
 }
@@ -154,7 +316,7 @@ function createMaterial(color, options = {}) {
   return new THREE.MeshStandardMaterial({
     color,
     roughness: 0.38,
-    metalness: 0.05,
+    metalness: 0.04,
     side: THREE.DoubleSide,
     ...options,
   });
@@ -196,7 +358,11 @@ function buildStem(params, grown) {
   const bottomRadius = 0.04 + (w - 0.1) * 0.60;
 
   const geometry = new THREE.CylinderGeometry(topRadius, bottomRadius, height, 24);
-  const stem = new THREE.Mesh(geometry, createMaterial(params.stemColor, { roughness: 0.72 }));
+  const stemMat = createMaterial(0xffffff, {
+    map: createStemTexture(params.stemColor),
+    roughness: 0.68,
+  });
+  const stem = new THREE.Mesh(geometry, stemMat);
   stem.position.y = height / 2;
   add(stem);
   
@@ -247,6 +413,8 @@ function buildLeaves(params, grown) {
   const leafGrowth = stage(day, 12, 48);
   if (params.leafCount === 0 || leafGrowth < 0.02) return;
 
+  const leafTex = createLeafTexture(params.leafColor, params.variegationColor, params.leafPattern);
+
   for (let i = 0; i < params.leafCount; i++) {
     const ratio = (i + 1) / (params.leafCount + 1);
     const angle = i * 2.399 + 0.45;
@@ -273,15 +441,14 @@ function buildLeaves(params, grown) {
       return width * Math.sin(t * Math.PI) * serration;
     });
 
-    const leaf = new THREE.Mesh(makeRibbonGeometry(points, widths), createMaterial(params.leafColor, { roughness: 0.55 }));
+    const leaf = new THREE.Mesh(
+      makeRibbonGeometry(points, widths),
+      createMaterial(0xffffff, {
+        map: leafTex,
+        roughness: 0.48,
+      })
+    );
     add(leaf);
-
-    if (params.leafPattern === "variegated") {
-      const stripePoints = points.map((p) => p.clone().add(new THREE.Vector3(0, 0.003, 0)));
-      const stripeWidths = widths.map((w) => w * 0.3);
-      const stripe = new THREE.Mesh(makeRibbonGeometry(stripePoints, stripeWidths), createMaterial(params.variegationColor, { roughness: 0.5 }));
-      add(stripe);
-    }
   }
 }
 
@@ -323,9 +490,8 @@ function buildPetals(params, stemTop) {
   if (petalGrowth < 0.015) return;
 
   const layerCount = params.petalLayers === "double" ? 2 : 1;
-  const baseColor = new THREE.Color(params.colorBase);
-  const tipColor = new THREE.Color(params.colorTip);
   const petalSize = params.petalLength * petalGrowth;
+  const petalTexture = createPetalTexture(params.colorBase, params.colorTip, params.uvPattern);
 
   for (let layer = 0; layer < layerCount; layer++) {
     const petalCount = layer === 1 ? Math.max(3, Math.floor(params.petalCount * 0.8)) : params.petalCount;
@@ -338,15 +504,14 @@ function buildPetals(params, stemTop) {
         const ruffle = params.petalEdge === "ruffled" ? 1 + 0.12 * Math.sin(t * Math.PI * 9 + i) : 1;
         return params.petalWidth * petalGrowth * profile * ruffle * (layer ? 0.8 : 1);
       });
-      const shade = 0.3 + (i % 4) * 0.13 + layer * 0.08;
-      const petalColor = baseColor.clone().lerp(tipColor, Math.min(0.92, shade));
       
       const petal = new THREE.Mesh(
         makeRibbonGeometry(points, widths),
-        createMaterial(petalColor, {
+        createMaterial(0xffffff, {
+          map: petalTexture,
           roughness: 0.32,
-          metalness: 0.08,
-          emissive: petalColor.clone().multiplyScalar(0.065),
+          metalness: 0.04,
+          emissive: new THREE.Color(params.colorBase).multiplyScalar(0.04),
         })
       );
       add(petal);
@@ -447,7 +612,6 @@ function rebuildFlower() {
   const grown = plantGrowth(day);
   const stemTop = params.stemHeight * grown;
   
-  // Dynamically focus camera look-at on top of the bloom as it grows
   targetLookY = THREE.MathUtils.lerp(0.8, stemTop, 0.7);
   
   clearFlower();
@@ -558,7 +722,6 @@ ui.loadFile.addEventListener("change", (event) => {
   event.target.value = "";
 });
 
-// View Presets
 $("viewSideBtn")?.addEventListener("click", () => {
   cameraPitch = 0.05;
   cameraRadius = 6.0;
@@ -572,12 +735,11 @@ $("viewAngledBtn")?.addEventListener("click", () => {
 });
 
 $("viewTopBtn")?.addEventListener("click", () => {
-  cameraPitch = 1.45; // ~83 degrees steep top-down
+  cameraPitch = 1.45;
   cameraRadius = 5.0;
   updateCameraPosition();
 });
 
-// Full 2-Axis Orbit Controls (Pitch + Yaw + Pinch Zoom)
 container.addEventListener("pointerdown", (event) => {
   dragging = true;
   dragStartX = event.clientX;
@@ -593,7 +755,6 @@ container.addEventListener("pointermove", (event) => {
   const deltaY = event.clientY - dragStartY;
   
   cameraYaw = startYaw - deltaX * 0.012;
-  // Vertical pitch clamped from -10° to almost direct overhead (+85°)
   cameraPitch = THREE.MathUtils.clamp(startPitch + deltaY * 0.012, -0.15, 1.48);
   updateCameraPosition();
 });
