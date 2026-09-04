@@ -296,7 +296,7 @@ let startYaw = 0;
 let startPitch = 0;
 
 const ids = [
-  "petalCount", "petalLength", "petalWidth", "petalCurl", "bloomOpenness",
+  "petalArrangement", "petalCount", "petalLength", "petalWidth", "petalCurl", "bloomOpenness",
   "petalShape", "petalEdge", "petalLayers", "colorBase", "colorTip",
   "stemHeight", "stemWidth", "stemColor", "leafCount", "leafLength", "leafWidth",
   "leafEdge", "leafPattern", "leafColor", "variegationColor",
@@ -394,8 +394,6 @@ function createMaterial(color, options = {}) {
   });
 }
 
-// ===== REALISTIC VOLUMETRIC BOTANICAL GEOMETRY (CAMBERED BLADE WITH VISIBLE EDGES) =====
-
 function makeSolidVolumeGeometry(points, widths, baseThickness = 0.14) {
   const segCount = points.length;
   const positions = [];
@@ -416,7 +414,6 @@ function makeSolidVolumeGeometry(points, widths, baseThickness = 0.14) {
     const up = tangent.clone().cross(side).normalize();
 
     const halfW = widths[i] / 2;
-    // Real botanical taper: Fleshy base, thick middle blade (0.12 - 0.16 units), fine crisp tip
     const currentThick = Math.max(0.02, baseThickness * (1.1 - t * 0.75) * (0.4 + 0.6 * Math.sin(t * Math.PI * 0.9)));
 
     const p = points[i];
@@ -444,28 +441,22 @@ function makeSolidVolumeGeometry(points, widths, baseThickness = 0.14) {
     const r1 = i * 4;
     const r2 = (i + 1) * 4;
 
-    // Top face
     indices.push(r1 + 0, r2 + 0, r1 + 1);
     indices.push(r1 + 1, r2 + 0, r2 + 1);
 
-    // Right side bevel face (visible rim highlight)
     indices.push(r1 + 1, r2 + 1, r1 + 2);
     indices.push(r1 + 2, r2 + 1, r2 + 2);
 
-    // Bottom face
     indices.push(r1 + 2, r2 + 2, r1 + 3);
     indices.push(r1 + 3, r2 + 2, r2 + 3);
 
-    // Left side bevel face (visible rim highlight)
     indices.push(r1 + 3, r2 + 3, r1 + 0);
     indices.push(r1 + 0, r2 + 3, r2 + 0);
   }
 
-  // Base cap
   indices.push(0, 1, 2);
   indices.push(0, 2, 3);
 
-  // Tip cap
   const tipStart = (segCount - 1) * 4;
   indices.push(tipStart + 0, tipStart + 2, tipStart + 1);
   indices.push(tipStart + 0, tipStart + 3, tipStart + 2);
@@ -498,7 +489,6 @@ function buildStem(params, grown) {
   stem.position.y = height / 2;
   add(stem);
 
-  // Receptacle / Calyx collar at flower base for organic transition
   const calyxGeo = new THREE.SphereGeometry(topRadius * 1.5, 18, 12);
   const calyxMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(params.stemColor).lerp(new THREE.Color(params.colorBase), 0.25), roughness: 0.55 });
   const calyx = new THREE.Mesh(calyxGeo, calyxMat);
@@ -518,7 +508,6 @@ function buildThorns(params, startY, stemHeight, stemRadius) {
     const angle = (i / thornCount) * Math.PI * 2 + (i * 0.4);
     const y = startY + (Math.random() - 0.5) * stemHeight * 0.75;
     
-    // Broad fleshy base collar for organic thorn attachment
     const baseCollarGeo = new THREE.SphereGeometry(0.04, 8, 6);
     const baseCollar = new THREE.Mesh(baseCollarGeo, createMaterial(params.stemColor, { roughness: 0.7 }));
     baseCollar.position.set(Math.cos(angle) * stemRadius, y, Math.sin(angle) * stemRadius);
@@ -570,10 +559,8 @@ function buildLeaves(params, grown) {
     const width = params.leafWidth * leafGrowth;
     const baseY = params.stemHeight * grown * (0.12 + ratio * 0.72);
 
-    // Stem radius at this exact leaf node
     const nodeStemRadius = (0.04 + (w - 0.1) * 0.60) * (1 - ratio * 0.35);
 
-    // 1. Organic Petiole Attachment Collar (Nodal Sheath)
     const petioleJoint = new THREE.Mesh(
       new THREE.SphereGeometry(nodeStemRadius * 0.55, 12, 8),
       createMaterial(params.stemColor, { roughness: 0.65 })
@@ -582,7 +569,6 @@ function buildLeaves(params, grown) {
     petioleJoint.scale.set(0.9, 1.4, 0.9);
     add(petioleJoint);
 
-    // 2. Leaf Blade points starting seamlessly from inside the stem node
     const points = [];
     const direction = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
     const sideDirection = new THREE.Vector3(-Math.sin(angle), 0, Math.cos(angle));
@@ -590,8 +576,6 @@ function buildLeaves(params, grown) {
     for (let s = 0; s <= 24; s++) {
       const t = s / 24;
       const wobble = params.leafEdge === "jagged" ? Math.sin(t * Math.PI * 10 + i) * 0.045 * length : 0;
-      
-      // Start slightly inside the stem radius so there's zero gap
       const distFromNode = nodeStemRadius * 0.6 + length * t;
       const point = direction.clone().multiplyScalar(distFromNode + wobble);
       point.add(sideDirection.clone().multiplyScalar(Math.sin(t * Math.PI * 2) * 0.025 * length));
@@ -601,7 +585,6 @@ function buildLeaves(params, grown) {
 
     const widths = points.map((point, pointIndex) => {
       const t = pointIndex / (points.length - 1);
-      // Seamless narrow petiole stalk (t=0) widening into leaf blade
       const petioleTaper = Math.min(1.0, t * 4.0);
       const serration = params.leafEdge === "jagged" ? 1 + 0.13 * Math.sin(t * Math.PI * 10 + i) : 1;
       return width * Math.sin(t * Math.PI) * petioleTaper * serration + (0.03 * (1 - t));
@@ -632,21 +615,24 @@ function buildBud(params, stemTop) {
   add(bud);
 }
 
-function makePetalPoints(params, angle, layer, stemTop, petalSize, opening, offset) {
+function makePetalPoints(params, angle, layer, stemTop, petalSize, opening, offset, radialOffset = 0, pitchOffset = 0) {
   const points = [];
   const segments = 36;
-  const layerScale = layer === 1 ? 0.72 : 1;
+  const layerScale = layer === 1 ? 0.75 : 1.0;
+
   for (let s = 0; s <= segments; s++) {
     const t = s / segments;
     const twist = params.petalCurl * t * Math.PI * 0.72;
     const direction = angle + twist;
-    const upwardDistance = petalSize * layerScale * t * (1 - opening * 0.94);
-    const outwardDistance = petalSize * layerScale * opening * (0.05 + 0.95 * t) * t;
+
+    const upwardDistance = petalSize * layerScale * t * (1 - opening * (0.92 - pitchOffset * 0.2));
+    const outwardDistance = radialOffset + petalSize * layerScale * opening * (0.05 + 0.95 * t) * t;
     const ruffle = Math.sin(t * Math.PI * 2.3 + offset) * 0.065 * petalSize * (params.petalEdge === "ruffled" ? 1 : 0.18);
     const curlLift = Math.sin(t * Math.PI) * params.petalCurl * 0.2 * petalSize;
+
     const x = Math.cos(direction) * (outwardDistance + ruffle);
     const z = Math.sin(direction) * (outwardDistance + ruffle);
-    const y = stemTop + upwardDistance + curlLift + layer * 0.025;
+    const y = stemTop + upwardDistance + curlLift + (layer * 0.025);
     points.push(new THREE.Vector3(x, y, z));
   }
   return points;
@@ -657,26 +643,52 @@ function buildPetals(params, stemTop) {
   const opening = params.bloomOpenness * stage(day, 68, 92);
   if (petalGrowth < 0.015) return;
 
-  const layerCount = params.petalLayers === "double" ? 2 : 1;
   const petalSize = params.petalLength * petalGrowth;
   const petalMaps = createPetalMaps(params.colorBase, params.colorTip, params.uvPattern);
+  const isFibonacci = params.petalArrangement === "fibonacci";
 
-  for (let layer = 0; layer < layerCount; layer++) {
-    const petalCount = layer === 1 ? Math.max(3, Math.floor(params.petalCount * 0.8)) : params.petalCount;
-    for (let i = 0; i < petalCount; i++) {
-      const angle = (i / petalCount) * Math.PI * 2 + (layer ? Math.PI / petalCount : 0);
-      const points = makePetalPoints(params, angle, layer, stemTop, petalSize, opening, i * 0.8 + layer);
+  if (isFibonacci) {
+    // ===== FIBONACCI GOLDEN SPIRAL PHYLLOTAXIS =====
+    // Golden angle = ~137.50776° = 2.39996323 rad
+    const goldenAngle = 2.39996323;
+    const totalPetals = Math.max(3, Math.round(params.petalCount));
+
+    for (let i = 0; i < totalPetals; i++) {
+      const phi = i * goldenAngle;
+      // Vogel's spiral radial distribution: r = c * sqrt(i)
+      const normIdx = i / totalPetals;
+      const spiralRadius = 0.06 + Math.sqrt(normIdx) * 0.45 * opening;
+      const verticalElevation = (normIdx * 0.08);
+
+      // Inner florets are slightly smaller and more upright
+      const scaleFactor = 0.55 + Math.sqrt(normIdx) * 0.45;
+      const currentPetalSize = petalSize * scaleFactor;
+      const floretOpening = THREE.MathUtils.lerp(opening * 0.5, opening, normIdx);
+
+      const points = makePetalPoints(
+        params,
+        phi,
+        0,
+        stemTop + verticalElevation,
+        currentPetalSize,
+        floretOpening,
+        i * 0.5,
+        spiralRadius,
+        normIdx * 0.3
+      );
+
       const widths = points.map((point, pointIndex) => {
         const t = pointIndex / (points.length - 1);
-        const profile = params.petalShape === "round" ? Math.pow(Math.sin(t * Math.PI), 0.56) : Math.pow(Math.sin(t * Math.PI), 1.5) * (1 - 0.12 * t);
+        const profile = params.petalShape === "round"
+          ? Math.pow(Math.sin(t * Math.PI), 0.56)
+          : Math.pow(Math.sin(t * Math.PI), 1.5) * (1 - 0.12 * t);
         const ruffle = params.petalEdge === "ruffled" ? 1 + 0.12 * Math.sin(t * Math.PI * 9 + i) : 1;
-        // Natural petal claw at base (narrower connection expanding into petal blade)
         const clawTaper = 0.3 + 0.7 * Math.sin(t * Math.PI);
-        return params.petalWidth * petalGrowth * profile * ruffle * clawTaper * (layer ? 0.8 : 1);
+        return params.petalWidth * petalGrowth * profile * ruffle * clawTaper * scaleFactor;
       });
-      
+
       const petal = new THREE.Mesh(
-        makeSolidVolumeGeometry(points, widths, 0.11),
+        makeSolidVolumeGeometry(points, widths, 0.10 * scaleFactor),
         new THREE.MeshStandardMaterial({
           map: petalMaps.diffuse,
           normalMap: petalMaps.normal,
@@ -686,6 +698,36 @@ function buildPetals(params, stemTop) {
         })
       );
       add(petal);
+    }
+  } else {
+    // ===== WHORLED (CONCENTRIC CYCLIC RINGS) =====
+    const layerCount = params.petalLayers === "double" ? 2 : 1;
+
+    for (let layer = 0; layer < layerCount; layer++) {
+      const petalCount = layer === 1 ? Math.max(3, Math.floor(params.petalCount * 0.8)) : params.petalCount;
+      for (let i = 0; i < petalCount; i++) {
+        const angle = (i / petalCount) * Math.PI * 2 + (layer ? Math.PI / petalCount : 0);
+        const points = makePetalPoints(params, angle, layer, stemTop, petalSize, opening, i * 0.8 + layer);
+        const widths = points.map((point, pointIndex) => {
+          const t = pointIndex / (points.length - 1);
+          const profile = params.petalShape === "round" ? Math.pow(Math.sin(t * Math.PI), 0.56) : Math.pow(Math.sin(t * Math.PI), 1.5) * (1 - 0.12 * t);
+          const ruffle = params.petalEdge === "ruffled" ? 1 + 0.12 * Math.sin(t * Math.PI * 9 + i) : 1;
+          const clawTaper = 0.3 + 0.7 * Math.sin(t * Math.PI);
+          return params.petalWidth * petalGrowth * profile * ruffle * clawTaper * (layer ? 0.8 : 1);
+        });
+
+        const petal = new THREE.Mesh(
+          makeSolidVolumeGeometry(points, widths, 0.11),
+          new THREE.MeshStandardMaterial({
+            map: petalMaps.diffuse,
+            normalMap: petalMaps.normal,
+            normalScale: new THREE.Vector2(1.2, 1.2),
+            roughness: 0.26,
+            metalness: 0.02
+          })
+        );
+        add(petal);
+      }
     }
   }
 }
@@ -809,7 +851,12 @@ function randomHexColor() {
 }
 
 function randomizeFlower() {
-  ui.petalCount.value = String(5 + Math.floor(Math.random() * 16));
+  ui.petalArrangement.value = Math.random() > 0.4 ? "fibonacci" : "whorled";
+  ui.petalCount.value = String(
+    ui.petalArrangement.value === "fibonacci"
+      ? 13 + Math.floor(Math.random() * 30)
+      : 5 + Math.floor(Math.random() * 16)
+  );
   ui.petalLength.value = (0.8 + Math.random() * 2.2).toFixed(1);
   ui.petalWidth.value = (0.18 + Math.random() * 0.64).toFixed(2);
   ui.petalCurl.value = (-0.85 + Math.random() * 1.7).toFixed(2);

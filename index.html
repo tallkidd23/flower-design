@@ -104,11 +104,20 @@
       </section>
 
       <section class="control-section">
-        <h2>Petals</h2>
+        <h2>Petals &amp; Phyllotaxis</h2>
+
+        <div class="field">
+          <label for="petalArrangement">Arrangement
+            <select id="petalArrangement">
+              <option value="whorled" selected>Whorled (Concentric Rings)</option>
+              <option value="fibonacci">Fibonacci Spiral (Golden Angle)</option>
+            </select>
+          </label>
+        </div>
 
         <div class="field">
           <label for="petalCount">Count <output id="petalCountValue">9</output></label>
-          <input id="petalCount" type="range" min="3" max="24" step="1" value="9">
+          <input id="petalCount" type="range" min="3" max="55" step="1" value="9">
         </div>
 
         <div class="field">
@@ -432,7 +441,6 @@
         <input id="loadFile" type="file" accept="application/json,.json" hidden>
       </section>
 
-      <!-- Seamless 1-Click Launch into Living Sim -->
       <section class="control-section export-section">
         <h2>Living Ecosystem</h2>
 
