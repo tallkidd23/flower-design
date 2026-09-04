@@ -6,14 +6,30 @@
 // Scene setup
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1a1a2e);
+
+// Beautiful gradient background
+const canvas = document.createElement('canvas');
+canvas.width = 512;
+canvas.height = 512;
+const ctx = canvas.getContext('2d');
+
+// Create gradient background
+const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 362);
+gradient.addColorStop(0, '#2d1b4e');
+gradient.addColorStop(0.5, '#1a1a2e');
+gradient.addColorStop(1, '#0f0f1e');
+ctx.fillStyle = gradient;
+ctx.fillRect(0, 0, 512, 512);
+
+const bgTexture = new THREE.CanvasTexture(canvas);
+scene.background = bgTexture;
 
 // Add subtle fog for depth
-scene.fog = new THREE.Fog(0x1a1a2e, 500, 1000);
+scene.fog = new THREE.FogExp2(0x1a1a2e, 0.0015);
 
 const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-camera.position.set(0, 150, 400);
-camera.lookAt(0, 100, 0);
+camera.position.set(0, 180, 450);
+camera.lookAt(0, 120, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(container.clientWidth, container.clientHeight);
@@ -21,40 +37,53 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
+renderer.toneMappingExposure = 1.3;
 container.appendChild(renderer.domElement);
 
 // Enhanced lighting setup
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
 scene.add(ambientLight);
 
 // Main directional light (sun)
-const mainLight = new THREE.DirectionalLight(0xfff4e6, 1.0);
-mainLight.position.set(150, 250, 150);
+const mainLight = new THREE.DirectionalLight(0xfff4e6, 1.1);
+mainLight.position.set(150, 280, 150);
 mainLight.castShadow = true;
 mainLight.shadow.mapSize.width = 2048;
 mainLight.shadow.mapSize.height = 2048;
 mainLight.shadow.camera.near = 0.5;
-mainLight.shadow.camera.far = 500;
-mainLight.shadow.camera.left = -200;
-mainLight.shadow.camera.right = 200;
-mainLight.shadow.camera.top = 200;
-mainLight.shadow.camera.bottom = -200;
+mainLight.shadow.camera.far = 600;
+mainLight.shadow.camera.left = -250;
+mainLight.shadow.camera.right = 250;
+mainLight.shadow.camera.top = 250;
+mainLight.shadow.camera.bottom = -250;
 scene.add(mainLight);
 
 // Fill light (warm)
-const fillLight = new THREE.DirectionalLight(0xffeedd, 0.4);
-fillLight.position.set(-100, 100, -100);
+const fillLight = new THREE.DirectionalLight(0xffeedd, 0.45);
+fillLight.position.set(-100, 120, -100);
 scene.add(fillLight);
 
 // Rim light for depth (cool blue)
-const rimLight = new THREE.DirectionalLight(0x6699ff, 0.3);
-rimLight.position.set(0, 50, -200);
+const rimLight = new THREE.DirectionalLight(0x6699ff, 0.35);
+rimLight.position.set(0, 80, -250);
 scene.add(rimLight);
 
 // Hemisphere light for natural sky simulation
-const hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x3d5c3d, 0.4);
+const hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x2d4a2d, 0.45);
 scene.add(hemiLight);
+
+// Add ground plane for shadows and context
+const groundGeometry = new THREE.PlaneGeometry(1000, 1000);
+const groundMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x1a1a2e,
+    roughness: 0.9,
+    metalness: 0.1
+});
+const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -20;
+ground.receiveShadow = true;
+scene.add(ground);
 
 // Current flower parts
 let flowerGroup = new THREE.Group();
@@ -204,17 +233,6 @@ function addNoise(ctx, width, height, opacity) {
  * Create enhanced 3D petal geometry with natural curvature
  */
 function createPetalGeometry(length, width) {
-    // Create curved surface
-    const points = [];
-    for (let i = 0; i <= 10; i++) {
-        const t = i / 10;
-        const x = (t - 0.5) * width;
-        const y = t * length;
-        // Add curvature (petals curve inward)
-        const z = Math.sin(t * Math.PI) * 8;
-        points.push(new THREE.Vector2(x, y));
-    }
-    
     const shape = new THREE.Shape();
     shape.moveTo(0, 0);
     shape.quadraticCurveTo(-width/2, length/3, -width/3, length/2);
@@ -238,8 +256,6 @@ function createPetalGeometry(length, width) {
  */
 function createLeafGeometry(length, width) {
     const shape = new THREE.Shape();
-    
-    // More realistic leaf shape (ovate-lanceolate)
     shape.moveTo(0, 0);
     shape.quadraticCurveTo(-width/2, length/5, -width/2.5, length/3);
     shape.quadraticCurveTo(-width/3, length/2, -width/4, length*0.7);
@@ -288,7 +304,6 @@ function createStemGeometry(length, width, curvature) {
     
     for (let i = 0; i <= segments; i++) {
         const t = i / segments;
-        // Natural stem curvature with slight S-curve
         const x = Math.sin(t * Math.PI * 2) * curvature * 12 + Math.sin(t * Math.PI * 4) * curvature * 3;
         const y = t * length;
         const z = Math.cos(t * Math.PI * 2) * curvature * 6;
@@ -297,18 +312,15 @@ function createStemGeometry(length, width, curvature) {
     
     const curve = new THREE.CatmullRomCurve3(points);
     
-    // Variable radius for natural look (slightly thicker at nodes)
     const radii = [];
     for (let i = 0; i <= segments; i++) {
         const t = i / segments;
-        // Add slight bulges at nodes (every 25% of stem)
         const nodeFactor = 1 + 0.15 * Math.sin(t * Math.PI * 4);
         radii.push(width/2 * nodeFactor);
     }
     
     const geometry = new THREE.TubeGeometry(curve, 30, 1, 8, false);
     
-    // Scale along the path to create variable thickness
     const positions = geometry.attributes.position.array;
     for (let i = 0; i < positions.length; i += 3) {
         const segmentIndex = Math.floor((i / 3) / (geometry.parameters.tubularSegments * (geometry.parameters.radialSegments + 1)));
@@ -374,8 +386,7 @@ function buildFlower() {
     const stemMaterial = new THREE.MeshStandardMaterial({ 
         color: colors.stem,
         roughness: 0.75,
-        metalness: 0.05,
-        normalScale: new THREE.Vector2(0.5, 0.5)
+        metalness: 0.05
     });
     stemMesh = new THREE.Mesh(stemGeometry, stemMaterial);
     stemMesh.position.y = -stemLength/2;
@@ -455,21 +466,18 @@ function buildFlower() {
     for (let i = 0; i < leafCount; i++) {
         const leafGroup = new THREE.Group();
         
-        // Create leaf blade
         const leaf = new THREE.Mesh(leafGeometry, leafMaterial);
         leaf.rotation.x = Math.PI / 2;
         leaf.castShadow = true;
         leaf.receiveShadow = true;
         leafGroup.add(leaf);
         
-        // Create petiole (leaf stalk) for realistic attachment
         const petiole = new THREE.Mesh(petioleGeometry, leafMaterial);
         petiole.position.z = -5;
         petiole.rotation.x = -Math.PI / 2;
         petiole.castShadow = true;
         leafGroup.add(petiole);
         
-        // Position on stem
         const t = 0.35 + (i / leafCount) * 0.5;
         const angle = (i / leafCount) * Math.PI * 2;
         const radius = stemWidth + 8;
@@ -500,7 +508,7 @@ function buildFlower() {
         opacity: 0.95
     });
     
-    const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // 137.5 degrees
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
     
     for (let i = 0; i < petalCount; i++) {
         const petal = new THREE.Mesh(petalGeometry, petalMaterial);
@@ -547,8 +555,7 @@ function buildFlower() {
     const centerMaterial = new THREE.MeshStandardMaterial({ 
         color: colors.center,
         roughness: 0.85,
-        metalness: 0.02,
-        bumpScale: 0.5
+        metalness: 0.02
     });
     centerMesh = new THREE.Mesh(centerGeometry, centerMaterial);
     centerMesh.position.y = stemLength/2 + 8;
@@ -601,7 +608,6 @@ function updateFlower() {
     geneticProfile.features.trichomes = document.getElementById('showTrichomes').checked;
     geneticProfile.features.carnivorous = document.getElementById('carnivorous').checked;
     
-    // Update display values
     document.getElementById('petalCountValue').textContent = geneticProfile.petalCount;
     document.getElementById('petalLengthValue').textContent = geneticProfile.petalLength;
     document.getElementById('petalWidthValue').textContent = geneticProfile.petalWidth;
@@ -629,8 +635,8 @@ function randomizeGenetics() {
     const hue2 = (hue1 + 160 + Math.random() * 40) % 360;
     document.getElementById('petalColor').value = `hsl(${hue1}, 75%, ${55 + Math.random() * 10}%)`;
     document.getElementById('centerColor').value = `hsl(${hue2}, 65%, ${50 + Math.random() * 10}%)`;
-    document.getElementById('stemColor').value = `hsl(${95 + Math.random() * 30}, 55 + Math.random() * 15%, ${30 + Math.random() * 10}%)`;
-    document.getElementById('leafColor').value = `hsl(${105 + Math.random() * 25}, 60 + Math.random() * 15%, ${35 + Math.random() * 10}%)`;
+    document.getElementById('stemColor').value = `hsl(${95 + Math.random() * 30}, ${55 + Math.random() * 15}%, ${30 + Math.random() * 10}%)`;
+    document.getElementById('leafColor').value = `hsl(${105 + Math.random() * 25}, ${60 + Math.random() * 15}%, ${35 + Math.random() * 10}%)`;
     
     updateFlower();
 }
@@ -639,25 +645,20 @@ function randomizeGenetics() {
  * Initialize controls
  */
 function initControls() {
-    // Sliders
     ['petalCount', 'petalLength', 'petalWidth', 'stemLength', 'stemWidth', 'stemCurvature', 'leafCount'].forEach(id => {
         document.getElementById(id).addEventListener('input', updateFlower);
     });
     
-    // Dropdown
     document.getElementById('phyllotaxisMode').addEventListener('change', updateFlower);
     
-    // Colors
     ['petalColor', 'centerColor', 'stemColor', 'leafColor'].forEach(id => {
         document.getElementById(id).addEventListener('input', updateFlower);
     });
     
-    // Checkboxes
     ['showThorns', 'showTrichomes', 'carnivorous'].forEach(id => {
         document.getElementById(id).addEventListener('change', updateFlower);
     });
     
-    // Buttons
     document.getElementById('randomizeBtn').addEventListener('click', randomizeGenetics);
     
     document.getElementById('saveBtn').addEventListener('click', () => {
@@ -690,18 +691,15 @@ function animate() {
     
     time += 0.01;
     
-    // Subtle wind animation for leaves
     leafMeshes.forEach((leaf, i) => {
         leaf.rotation.x = Math.PI / 3.5 + Math.sin(time + i) * 0.05;
         leaf.rotation.z = (i / leafMeshes.length - 0.5) * 0.2 + Math.cos(time * 0.8 + i * 0.5) * 0.03;
     });
     
-    // Gentle petal movement
     petalMeshes.forEach((petal, i) => {
         petal.rotation.x += Math.sin(time * 0.5 + i) * 0.002;
     });
     
-    // Slow rotation for presentation
     flowerGroup.rotation.y += 0.0015;
     
     renderer.render(scene, camera);
@@ -718,7 +716,6 @@ function onWindowResize() {
 
 window.addEventListener('resize', onWindowResize);
 
-// Color utilities
 function lightenColor(color, percent) {
     const num = parseInt(color.replace('#', ''), 16);
     const amt = Math.round(2.55 * percent);
@@ -737,10 +734,9 @@ function darkenColor(color, percent) {
     return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`;
 }
 
-// Initialize
 initControls();
 buildFlower();
 animate();
 
 console.log('🌸 Enhanced Flower Design Studio initialized');
-console.log('Features: Realistic leaf attachments, procedural textures, wind animation');
+console.log('Features: Realistic leaf attachments, procedural textures, wind animation, ground plane');
