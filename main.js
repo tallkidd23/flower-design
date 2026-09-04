@@ -31,7 +31,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 container.appendChild(renderer.domElement);
 
-// Enhanced Multi-Angle Botanical Lighting
+// Multi-point Studio Lighting
 scene.add(new THREE.AmbientLight(0xffffff, 0.7));
 
 const keyLight = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -53,167 +53,245 @@ scene.add(fillLight);
 const flower = new THREE.Group();
 scene.add(flower);
 
-// ===== HIGH-CONTRAST PROCEDURAL TEXTURE GENERATORS =====
+// ===== HIGH-CONTRAST PROCEDURAL TEXTURE GENERATORS (WITH NORMAL MAPS) =====
 
-function createPetalTexture(baseHex, tipHex, uvStrength = 0.4) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext("2d");
+function createPetalMaps(baseHex, tipHex, uvStrength = 0.4) {
+  // 1. Diffuse / Albedo Map
+  const dCanvas = document.createElement("canvas");
+  dCanvas.width = 512;
+  dCanvas.height = 512;
+  const dCtx = dCanvas.getContext("2d");
 
-  // V-axis is length along petal: v=0 is base, v=1 is tip
-  const grad = ctx.createLinearGradient(0, 0, 0, 512);
+  // Longitudinal Gradient (v=0 throat -> v=1 tip)
+  const grad = dCtx.createLinearGradient(0, 0, 0, 512);
   grad.addColorStop(0, baseHex);
   grad.addColorStop(0.35, baseHex);
   grad.addColorStop(0.85, tipHex);
   grad.addColorStop(1, tipHex);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 512, 512);
+  dCtx.fillStyle = grad;
+  dCtx.fillRect(0, 0, 512, 512);
 
-  // High-Contrast Longitudinal Micro-Veins
+  // 2. Normal Map Canvas (for physical light displacement)
+  const nCanvas = document.createElement("canvas");
+  nCanvas.width = 512;
+  nCanvas.height = 512;
+  const nCtx = nCanvas.getContext("2d");
+  nCtx.fillStyle = "rgb(128, 128, 255)"; // Flat normal neutral
+  nCtx.fillRect(0, 0, 512, 512);
+
+  // High-Contrast Veins & Normal Creases
   for (let i = 0; i <= 36; i++) {
     const normX = i / 36;
     const xPos = normX * 512;
     const spread = (normX - 0.5) * 60;
 
-    // Highlight ridge
-    ctx.beginPath();
-    ctx.moveTo(xPos, 0);
-    ctx.bezierCurveTo(
-      xPos + spread * 0.4, 160,
-      xPos + spread * 0.8, 360,
-      xPos + spread, 512
-    );
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.38)";
-    ctx.lineWidth = 2.2;
-    ctx.stroke();
+    // Diffuse highlight
+    dCtx.beginPath();
+    dCtx.moveTo(xPos, 0);
+    dCtx.bezierCurveTo(xPos + spread * 0.4, 160, xPos + spread * 0.8, 360, xPos + spread, 512);
+    dCtx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+    dCtx.lineWidth = 2.4;
+    dCtx.stroke();
 
-    // Shadow depression
-    ctx.beginPath();
-    ctx.moveTo(xPos + 1.5, 0);
-    ctx.bezierCurveTo(
-      xPos + spread * 0.4 + 1.5, 160,
-      xPos + spread * 0.8 + 1.5, 360,
-      xPos + spread + 1.5, 512
-    );
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.32)";
-    ctx.lineWidth = 1.8;
-    ctx.stroke();
+    // Diffuse shadow trench
+    dCtx.beginPath();
+    dCtx.moveTo(xPos + 1.5, 0);
+    dCtx.bezierCurveTo(xPos + spread * 0.4 + 1.5, 160, xPos + spread * 0.8 + 1.5, 360, xPos + spread + 1.5, 512);
+    dCtx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+    dCtx.lineWidth = 2.0;
+    dCtx.stroke();
+
+    // Normal Map Left/Right bevels
+    nCtx.beginPath();
+    nCtx.moveTo(xPos - 1, 0);
+    nCtx.bezierCurveTo(xPos + spread * 0.4 - 1, 160, xPos + spread * 0.8 - 1, 360, xPos + spread - 1, 512);
+    nCtx.strokeStyle = "rgb(170, 128, 255)";
+    nCtx.lineWidth = 2.0;
+    nCtx.stroke();
+
+    nCtx.beginPath();
+    nCtx.moveTo(xPos + 1, 0);
+    nCtx.bezierCurveTo(xPos + spread * 0.4 + 1, 160, xPos + spread * 0.8 + 1, 360, xPos + spread + 1, 512);
+    nCtx.strokeStyle = "rgb(85, 128, 255)";
+    nCtx.lineWidth = 2.0;
+    nCtx.stroke();
   }
 
-  // Botanical Throat Freckles (Concentrated near base v=0 -> v=0.35)
+  // Botanical Freckles / Spots
   for (let s = 0; s < 140; s++) {
     const spotX = 256 + (Math.random() - 0.5) * 440 * (1 - s / 180);
     const spotY = 15 + Math.random() * 160;
     const r = 1.5 + Math.random() * 3.5;
 
-    ctx.beginPath();
-    ctx.arc(spotX, spotY, r, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(25, 0, 35, 0.82)";
-    ctx.fill();
+    dCtx.beginPath();
+    dCtx.arc(spotX, spotY, r, 0, Math.PI * 2);
+    dCtx.fillStyle = "rgba(25, 0, 35, 0.85)";
+    dCtx.fill();
 
-    // Speckle halo
-    ctx.beginPath();
-    ctx.arc(spotX, spotY, r * 1.6, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(255, 210, 240, 0.35)";
-    ctx.fill();
+    dCtx.beginPath();
+    dCtx.arc(spotX, spotY, r * 1.6, 0, Math.PI * 2);
+    dCtx.fillStyle = "rgba(255, 210, 240, 0.35)";
+    dCtx.fill();
+
+    // Bump pit in normal map
+    nCtx.beginPath();
+    nCtx.arc(spotX, spotY, r, 0, Math.PI * 2);
+    nCtx.fillStyle = "rgb(128, 100, 230)";
+    nCtx.fill();
   }
 
   // UV Guide Lines
   if (uvStrength > 0.05) {
     for (let u = -4; u <= 4; u++) {
-      ctx.beginPath();
-      ctx.moveTo(256 + u * 20, 0);
-      ctx.lineTo(256 + u * 45, 260);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${uvStrength * 0.6})`;
-      ctx.lineWidth = 3.0;
-      ctx.stroke();
+      dCtx.beginPath();
+      dCtx.moveTo(256 + u * 20, 0);
+      dCtx.lineTo(256 + u * 45, 260);
+      dCtx.strokeStyle = `rgba(255, 255, 255, ${uvStrength * 0.6})`;
+      dCtx.lineWidth = 3.0;
+      dCtx.stroke();
     }
   }
 
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.ClampToEdgeWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
+  const diffuse = new THREE.CanvasTexture(dCanvas);
+  diffuse.wrapS = THREE.ClampToEdgeWrapping;
+  diffuse.wrapT = THREE.ClampToEdgeWrapping;
+  diffuse.colorSpace = THREE.SRGBColorSpace;
+
+  const normal = new THREE.CanvasTexture(nCanvas);
+  normal.wrapS = THREE.ClampToEdgeWrapping;
+  normal.wrapT = THREE.ClampToEdgeWrapping;
+
+  return { diffuse, normal };
 }
 
-function createLeafTexture(leafHex, varHex, pattern = "variegated") {
-  const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext("2d");
+function createLeafMaps(leafHex, varHex, pattern = "variegated") {
+  const dCanvas = document.createElement("canvas");
+  dCanvas.width = 512;
+  dCanvas.height = 512;
+  const dCtx = dCanvas.getContext("2d");
 
-  // Base Leaf Color
-  ctx.fillStyle = leafHex;
-  ctx.fillRect(0, 0, 512, 512);
+  dCtx.fillStyle = leafHex;
+  dCtx.fillRect(0, 0, 512, 512);
 
-  // Variegation edge bleeding (U=0 and U=1 are outer edges)
+  const nCanvas = document.createElement("canvas");
+  nCanvas.width = 512;
+  nCanvas.height = 512;
+  const nCtx = nCanvas.getContext("2d");
+  nCtx.fillStyle = "rgb(128, 128, 255)";
+  nCtx.fillRect(0, 0, 512, 512);
+
   if (pattern === "variegated") {
-    ctx.fillStyle = varHex;
+    dCtx.fillStyle = varHex;
     for (let y = 0; y < 512; y += 8) {
       const margin = 35 + Math.sin(y * 0.08) * 18 + Math.random() * 12;
-      ctx.fillRect(0, y, margin, 10);
-      ctx.fillRect(512 - margin, y, margin, 10);
+      dCtx.fillRect(0, y, margin, 10);
+      dCtx.fillRect(512 - margin, y, margin, 10);
     }
   }
 
-  // Midrib (U = 0.5 / X = 256)
-  ctx.beginPath();
-  ctx.moveTo(256, 0);
-  ctx.lineTo(256, 512);
-  ctx.strokeStyle = pattern === "variegated" ? varHex : "rgba(255, 255, 255, 0.65)";
-  ctx.lineWidth = 7;
-  ctx.stroke();
+  // Midrib
+  dCtx.beginPath();
+  dCtx.moveTo(256, 0);
+  dCtx.lineTo(256, 512);
+  dCtx.strokeStyle = pattern === "variegated" ? varHex : "rgba(255, 255, 255, 0.7)";
+  dCtx.lineWidth = 7;
+  dCtx.stroke();
 
-  // Lateral Veins
+  nCtx.beginPath();
+  nCtx.moveTo(254, 0);
+  nCtx.lineTo(254, 512);
+  nCtx.strokeStyle = "rgb(190, 128, 255)";
+  nCtx.lineWidth = 4;
+  nCtx.stroke();
+
+  nCtx.beginPath();
+  nCtx.moveTo(258, 0);
+  nCtx.lineTo(258, 512);
+  nCtx.strokeStyle = "rgb(65, 128, 255)";
+  nCtx.lineWidth = 4;
+  nCtx.stroke();
+
+  // Lateral Secondary Veins
   for (let y = 20; y < 500; y += 32) {
-    // Left branch
-    ctx.beginPath();
-    ctx.moveTo(256, y);
-    ctx.quadraticCurveTo(140, y + 25, 0, y + 45);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
+    dCtx.beginPath();
+    dCtx.moveTo(256, y);
+    dCtx.quadraticCurveTo(140, y + 25, 0, y + 45);
+    dCtx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+    dCtx.lineWidth = 2.5;
+    dCtx.stroke();
 
-    // Right branch
-    ctx.beginPath();
-    ctx.moveTo(256, y);
-    ctx.quadraticCurveTo(372, y + 25, 512, y + 45);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
+    dCtx.beginPath();
+    dCtx.moveTo(256, y);
+    dCtx.quadraticCurveTo(372, y + 25, 512, y + 45);
+    dCtx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+    dCtx.lineWidth = 2.5;
+    dCtx.stroke();
+
+    // Normal map ridge
+    nCtx.beginPath();
+    nCtx.moveTo(256, y);
+    nCtx.quadraticCurveTo(140, y + 25, 0, y + 45);
+    nCtx.strokeStyle = "rgb(160, 160, 255)";
+    nCtx.lineWidth = 3.0;
+    nCtx.stroke();
+
+    nCtx.beginPath();
+    nCtx.moveTo(256, y);
+    nCtx.quadraticCurveTo(372, y + 25, 512, y + 45);
+    nCtx.strokeStyle = "rgb(95, 95, 255)";
+    nCtx.lineWidth = 3.0;
+    nCtx.stroke();
   }
 
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.ClampToEdgeWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
+  const diffuse = new THREE.CanvasTexture(dCanvas);
+  diffuse.wrapS = THREE.ClampToEdgeWrapping;
+  diffuse.wrapT = THREE.ClampToEdgeWrapping;
+  diffuse.colorSpace = THREE.SRGBColorSpace;
+
+  const normal = new THREE.CanvasTexture(nCanvas);
+  normal.wrapS = THREE.ClampToEdgeWrapping;
+  normal.wrapT = THREE.ClampToEdgeWrapping;
+
+  return { diffuse, normal };
 }
 
-function createStemTexture(stemHex) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 512;
-  const ctx = canvas.getContext("2d");
+function createStemMaps(stemHex) {
+  const dCanvas = document.createElement("canvas");
+  dCanvas.width = 256;
+  dCanvas.height = 512;
+  const dCtx = dCanvas.getContext("2d");
+  dCtx.fillStyle = stemHex;
+  dCtx.fillRect(0, 0, 256, 512);
 
-  ctx.fillStyle = stemHex;
-  ctx.fillRect(0, 0, 256, 512);
+  const nCanvas = document.createElement("canvas");
+  nCanvas.width = 256;
+  nCanvas.height = 512;
+  const nCtx = nCanvas.getContext("2d");
+  nCtx.fillStyle = "rgb(128, 128, 255)";
+  nCtx.fillRect(0, 0, 256, 512);
 
-  // High contrast vascular bark striations
   for (let x = 0; x < 256; x += 6) {
     const tone = (Math.random() - 0.5) * 90;
-    ctx.fillStyle = `rgba(${tone > 0 ? 255 : 0}, ${tone > 0 ? 255 : 0}, ${tone > 0 ? 255 : 0}, ${Math.abs(tone) / 255 * 0.55})`;
-    ctx.fillRect(x, 0, 3 + Math.random() * 3, 512);
+    dCtx.fillStyle = `rgba(${tone > 0 ? 255 : 0}, ${tone > 0 ? 255 : 0}, ${tone > 0 ? 255 : 0}, ${Math.abs(tone) / 255 * 0.55})`;
+    dCtx.fillRect(x, 0, 3 + Math.random() * 3, 512);
+
+    const normalVal = Math.round(128 + (tone / 90) * 45);
+    nCtx.fillStyle = `rgb(${normalVal}, 128, 255)`;
+    nCtx.fillRect(x, 0, 3, 512);
   }
 
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(3, 1);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
+  const diffuse = new THREE.CanvasTexture(dCanvas);
+  diffuse.wrapS = THREE.RepeatWrapping;
+  diffuse.wrapT = THREE.RepeatWrapping;
+  diffuse.repeat.set(3, 1);
+  diffuse.colorSpace = THREE.SRGBColorSpace;
+
+  const normal = new THREE.CanvasTexture(nCanvas);
+  normal.wrapS = THREE.RepeatWrapping;
+  normal.wrapT = THREE.RepeatWrapping;
+  normal.repeat.set(3, 1);
+
+  return { diffuse, normal };
 }
 
 // ===== STATE & PARAMS =====
@@ -307,10 +385,12 @@ function clearFlower() {
     if (Array.isArray(mesh.material)) {
       mesh.material.forEach((m) => {
         m.map?.dispose();
+        m.normalMap?.dispose();
         m.dispose();
       });
     } else {
       mesh.material?.map?.dispose();
+      mesh.material?.normalMap?.dispose();
       mesh.material?.dispose();
     }
   }
@@ -338,12 +418,10 @@ function makeRibbonGeometry(points, widths) {
     if (side.lengthSq() < 0.0001) side = new THREE.Vector3(1, 0, 0);
     side.normalize().multiplyScalar(widths[i] / 2);
 
-    // Left vertex (U = 0, V = t)
     positions.push(points[i].x + side.x, points[i].y + side.y, points[i].z + side.z);
     normals.push(0, 1, 0);
     uvs.push(0, t);
 
-    // Right vertex (U = 1, V = t)
     positions.push(points[i].x - side.x, points[i].y - side.y, points[i].z - side.z);
     normals.push(0, 1, 0);
     uvs.push(1, t);
@@ -371,10 +449,13 @@ function buildStem(params, grown) {
   const bottomRadius = 0.04 + (w - 0.1) * 0.60;
 
   const geometry = new THREE.CylinderGeometry(topRadius, bottomRadius, height, 24);
+  const stemMaps = createStemMaps(params.stemColor);
   const stemMat = new THREE.MeshStandardMaterial({
-    map: createStemTexture(params.stemColor),
-    roughness: 0.65,
-    metalness: 0.05
+    map: stemMaps.diffuse,
+    normalMap: stemMaps.normal,
+    normalScale: new THREE.Vector2(0.8, 0.8),
+    roughness: 0.62,
+    metalness: 0.04
   });
   const stem = new THREE.Mesh(geometry, stemMat);
   stem.position.y = height / 2;
@@ -427,7 +508,7 @@ function buildLeaves(params, grown) {
   const leafGrowth = stage(day, 12, 48);
   if (params.leafCount === 0 || leafGrowth < 0.02) return;
 
-  const leafTex = createLeafTexture(params.leafColor, params.variegationColor, params.leafPattern);
+  const leafMaps = createLeafMaps(params.leafColor, params.variegationColor, params.leafPattern);
 
   for (let i = 0; i < params.leafCount; i++) {
     const ratio = (i + 1) / (params.leafCount + 1);
@@ -458,8 +539,10 @@ function buildLeaves(params, grown) {
     const leaf = new THREE.Mesh(
       makeRibbonGeometry(points, widths),
       new THREE.MeshStandardMaterial({
-        map: leafTex,
-        roughness: 0.45,
+        map: leafMaps.diffuse,
+        normalMap: leafMaps.normal,
+        normalScale: new THREE.Vector2(0.9, 0.9),
+        roughness: 0.42,
         side: THREE.DoubleSide
       })
     );
@@ -506,7 +589,7 @@ function buildPetals(params, stemTop) {
 
   const layerCount = params.petalLayers === "double" ? 2 : 1;
   const petalSize = params.petalLength * petalGrowth;
-  const petalTexture = createPetalTexture(params.colorBase, params.colorTip, params.uvPattern);
+  const petalMaps = createPetalMaps(params.colorBase, params.colorTip, params.uvPattern);
 
   for (let layer = 0; layer < layerCount; layer++) {
     const petalCount = layer === 1 ? Math.max(3, Math.floor(params.petalCount * 0.8)) : params.petalCount;
@@ -523,8 +606,10 @@ function buildPetals(params, stemTop) {
       const petal = new THREE.Mesh(
         makeRibbonGeometry(points, widths),
         new THREE.MeshStandardMaterial({
-          map: petalTexture,
-          roughness: 0.28,
+          map: petalMaps.diffuse,
+          normalMap: petalMaps.normal,
+          normalScale: new THREE.Vector2(1.2, 1.2),
+          roughness: 0.26,
           metalness: 0.02,
           side: THREE.DoubleSide
         })
