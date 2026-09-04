@@ -28,8 +28,9 @@ scene.background = bgTexture;
 scene.fog = new THREE.FogExp2(0x1a1a2e, 0.0015);
 
 const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-camera.position.set(0, 180, 450);
-camera.lookAt(0, 120, 0);
+camera.position.set(0, 125, 500);
+camera.lookAt(0, 90, 0);
+
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(container.clientWidth, container.clientHeight);
@@ -99,9 +100,9 @@ let trichomeMeshes = [];
 // Genetic profile
 let geneticProfile = {
     petalCount: 8,
-    petalLength: 80,
-    petalWidth: 45,
-    stemLength: 220,
+    petalLength: 95,
+    petalWidth: 58,
+    stemLength: 150,
     stemWidth: 10,
     stemCurvature: 0.3,
     leafCount: 5,
@@ -517,7 +518,7 @@ function buildFlower() {
         
         if (geneticProfile.phyllotaxisMode === 'spiral') {
             angle = i * goldenAngle;
-            radius = 18 * Math.sqrt(i + 1);
+            radius = 12 + 8 * Math.sqrt(i + 1);
             heightOffset = -Math.sqrt(i + 1) * 1.5;
         } else if (geneticProfile.phyllotaxisMode === 'whorled') {
             const whorlSize = 5;
@@ -618,6 +619,10 @@ function updateFlower() {
     document.getElementById('leafCountValue').textContent = geneticProfile.leafCount;
     
     buildFlower();
+    
+    flowerGroup.position.set(0, -20, 0);
+flowerGroup.scale.setScalar(0.8);
+
 }
 
 /**
