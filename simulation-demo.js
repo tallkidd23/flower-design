@@ -22,15 +22,15 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 
 function resizeCanvas() {
-  const width = container.clientWidth || window.innerWidth - 320;
-  const height = container.clientHeight || window.innerHeight;
+  const width = container.clientWidth || window.innerWidth;
+  const height = container.clientHeight || 400;
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
 }
 window.addEventListener('resize', resizeCanvas);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
 const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
 keyLight.position.set(20, 40, 20);
 scene.add(keyLight);
@@ -77,7 +77,7 @@ const moonCrest = createSpeciesFromTemplate(defaultPlantSpecies, {
     ...defaultPlantSpecies.reproduction,
     pollination_syndrome: "moth",
     scent_profile: "sweet-night",
-    flowering_time: { start_day: 10, duration_days: 50, season: "late_spring" },
+    flowering_time: { start_day: 5, duration_days: 60, season: "late_spring" },
     nectar_production: 0.8
   }
 });
@@ -99,7 +99,7 @@ const emberBell = createSpeciesFromTemplate(defaultPlantSpecies, {
     ...defaultPlantSpecies.reproduction,
     pollination_syndrome: "butterfly",
     scent_profile: "spiced",
-    flowering_time: { start_day: 15, duration_days: 50, season: "late_spring" },
+    flowering_time: { start_day: 10, duration_days: 60, season: "late_spring" },
     nectar_production: 0.7
   }
 });
@@ -113,7 +113,7 @@ function createPlantMesh(species, position) {
   const group = new THREE.Group();
   const stemHeight = (species.morphology?.stem?.height || 2) * 3;
   
-  const stemColor = species.morphology?.bud?.color || "#28643a";
+  const stemColor = species.morphology?.bud?.color || species.morphology?.stemColor || "#28643a";
   const stemGeo = new THREE.CylinderGeometry(0.12, 0.22, stemHeight, 10);
   const stemMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(stemColor), roughness: 0.8 });
   const stem = new THREE.Mesh(stemGeo, stemMat);
@@ -181,7 +181,7 @@ function createPlantMesh(species, position) {
     }
   }
 
-  // Carnivorous trap indicator
+  // Carnivorous trap
   if (species.carnivorous?.enabled || species.physiology?.nutrients?.special_strategy === "carnivorous") {
     const trapMat = new THREE.MeshStandardMaterial({ color: 0xff1493, roughness: 0.3, emissive: 0x440022 });
     const trapGeo = new THREE.SphereGeometry(0.5, 10, 8);
@@ -222,7 +222,7 @@ function createPollinatorMesh(species, position) {
 
 function initializeSimulation() {
   plantMeshes.forEach(mesh => scene.remove(mesh));
-  pollinatorMeshes.forEach(mesh => scene.remove(mesh));
+  pollinatorMeshes.forEach(item => scene.remove(item.mesh));
   plantMeshes.length = 0;
   pollinatorMeshes.length = 0;
   
@@ -348,12 +348,15 @@ function logEvent(message, type = "info") {
   log.scrollTop = log.scrollHeight;
 }
 
-// ===== FILE INPUT EVENT =====
+// ===== DIRECT MOBILE-SAFE FILE INPUT =====
 
 const fileInput = document.getElementById('fileInput');
+
 fileInput.addEventListener('change', async (event) => {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
+
+  logEvent(`Reading file: ${file.name}...`, "info");
 
   try {
     const species = await loadSpeciesFromFile(file);
@@ -366,8 +369,10 @@ fileInput.addEventListener('change', async (event) => {
     initializeSimulation();
   } catch (err) {
     logEvent(`✗ Upload error: ${err.message}`, "warning");
+    alert(`Could not load file: ${err.message}`);
   }
 
+  // Clear so user can re-upload
   fileInput.value = '';
 });
 
@@ -409,5 +414,5 @@ resizeCanvas();
 speciesLibrary.getAll().forEach(s => customSpeciesList.push(s));
 initializeSimulation();
 updateSpeciesList();
-logEvent("System ready. Upload a species JSON or press Start.", "info");
+logEvent("System ready. Choose a file above to add custom flowers.", "info");
 animate();

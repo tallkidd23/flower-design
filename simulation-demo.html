@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Ecosystem Simulation</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -10,46 +10,78 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #0a0a0a;
       color: #fff;
-      overflow: hidden;
+      overflow-x: hidden;
     }
     #app {
-      display: grid;
-      grid-template-columns: 1fr 320px;
-      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    @media (min-width: 768px) {
+      #app {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        height: 100vh;
+      }
     }
     #canvas-container {
       background: #000;
+      width: 100%;
+      height: 50vh;
+      min-height: 300px;
       position: relative;
+    }
+    @media (min-width: 768px) {
+      #canvas-container {
+        height: 100%;
+      }
     }
     #controls {
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      padding: 20px;
+      padding: 16px;
       overflow-y: auto;
-      border-left: 1px solid #2a2a4e;
+      border-top: 1px solid #2a2a4e;
+    }
+    @media (min-width: 768px) {
+      #controls {
+        border-top: none;
+        border-left: 1px solid #2a2a4e;
+      }
     }
     h1 {
-      font-size: 1.4rem;
-      margin-bottom: 20px;
+      font-size: 1.3rem;
+      margin-bottom: 16px;
       color: #a8b4f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .nav-link {
+      font-size: 0.8rem;
+      color: #9d7cff;
+      text-decoration: none;
+      border: 1px solid #9d7cff;
+      padding: 4px 8px;
+      border-radius: 4px;
     }
     .panel {
-      background: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.06);
       border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 16px;
+      padding: 14px;
+      margin-bottom: 14px;
     }
     .panel h2 {
-      font-size: 1rem;
+      font-size: 0.95rem;
       color: #a8b4f0;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       border-bottom: 1px solid rgba(255,255,255,0.1);
-      padding-bottom: 8px;
+      padding-bottom: 6px;
     }
     .stat-row {
       display: flex;
       justify-content: space-between;
-      padding: 6px 0;
-      font-size: 0.9rem;
+      padding: 5px 0;
+      font-size: 0.85rem;
     }
     .stat-label { color: #888; }
     .stat-value { color: #fff; font-weight: 600; }
@@ -68,75 +100,77 @@
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
     }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,0.4); }
-    .btn-secondary { background: rgba(255,255,255,0.1); color: white; }
-    .btn-secondary:hover { background: rgba(255,255,255,0.2); }
-    .file-input-btn {
-      display: block;
-      width: 100%;
-      padding: 12px;
-      background: rgba(255,255,255,0.1);
-      border: 2px dashed rgba(255,255,255,0.3);
-      border-radius: 6px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      color: #aaa;
-      margin-bottom: 12px;
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-secondary { background: rgba(255,255,255,0.12); color: white; }
+    .btn-secondary:active { background: rgba(255,255,255,0.2); }
+    
+    .upload-container {
+      margin-bottom: 10px;
     }
-    .file-input-btn:hover { background: rgba(255,255,255,0.15); border-color: #667eea; color: #fff; }
-    #fileInput { display: none; }
-    .species-list { max-height: 200px; overflow-y: auto; }
+    #fileInput {
+      width: 100%;
+      padding: 10px;
+      background: rgba(0,0,0,0.4);
+      border: 1px dashed rgba(255,255,255,0.3);
+      border-radius: 6px;
+      color: #ccc;
+      font-size: 0.85rem;
+    }
+    .species-list { max-height: 180px; overflow-y: auto; margin-top: 8px; }
     .species-item {
       display: flex;
       align-items: center;
       gap: 10px;
       padding: 8px;
-      background: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.06);
       border-radius: 6px;
       margin-bottom: 6px;
       font-size: 0.85rem;
     }
-    .species-color { width: 20px; height: 20px; border-radius: 4px; border: 2px solid rgba(255,255,255,0.2); }
-    .species-info { flex: 1; }
+    .species-color { width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0; }
+    .species-info { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .species-name { font-weight: 600; color: #fff; }
-    .species-count { font-size: 0.75rem; color: #888; }
+    
     .log-container {
-      max-height: 250px;
+      max-height: 200px;
       overflow-y: auto;
-      font-family: "Courier New", monospace;
-      font-size: 0.8rem;
-      background: rgba(0,0,0,0.3);
-      padding: 10px;
+      font-family: monospace;
+      font-size: 0.75rem;
+      background: rgba(0,0,0,0.4);
+      padding: 8px;
       border-radius: 6px;
       border: 1px solid rgba(255,255,255,0.1);
     }
-    .log-entry { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .log-entry { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .log-entry.success { color: #4ade80; }
     .log-entry.info { color: #60a5fa; }
     .log-entry.warning { color: #fbbf24; }
-    .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
-    .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   </style>
 </head>
 <body>
   <div id="app">
     <div id="canvas-container"></div>
     <div id="controls">
-      <h1>🌿 Ecosystem Simulation</h1>
+      <h1>
+        <span>🌿 Living Field</span>
+        <a href="index.html" class="nav-link">🌸 Lab</a>
+      </h1>
       
       <div class="panel">
         <h2>Controls</h2>
-        <button class="btn-primary" id="startBtn">▶ Start</button>
+        <button class="btn-primary" id="startBtn">▶ Start Season</button>
         <button class="btn-secondary" id="pauseBtn">⏸ Pause</button>
         <button class="btn-secondary" id="resetBtn">🔄 Reset</button>
       </div>
 
       <div class="panel">
-        <h2>Load Species</h2>
-        <label for="fileInput" class="file-input-btn">📁 Upload species JSON</label>
-        <input type="file" id="fileInput" accept=".json,application/json">
+        <h2>Load Custom Species</h2>
+        <div class="upload-container">
+          <input type="file" id="fileInput" accept=".json,text/plain,application/json">
+        </div>
         <div class="species-list" id="speciesList"></div>
       </div>
 
@@ -150,7 +184,7 @@
       </div>
 
       <div class="panel">
-        <h2>Species</h2>
+        <h2>Active Species</h2>
         <div class="legend" id="legendContainer"></div>
       </div>
 
