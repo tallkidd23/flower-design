@@ -1,40 +1,55 @@
 // export-integration.js
-// Export current flower design as species JSON for simulation
+// Map detailed Abstract Bloom Lab parameters to species schema
 
-export function getCurrentFlowerData() {
-  // Read current values from your existing sliders
-  // Adjust these IDs to match your actual slider IDs
-  const petalCount = parseInt(document.getElementById('petalCount')?.value || '5', 10);
-  const petalLength = parseFloat(document.getElementById('petalLength')?.value || '1', 10);
-  const petalColor = document.getElementById('petalColor')?.value || '#ff6b9e';
-  const stemHeight = parseFloat(document.getElementById('stemHeight')?.value || '1.5', 10);
-  const leafSize = parseFloat(document.getElementById('leafSize')?.value || '0.7', 10);
-
+export function readCurrentDesignParams() {
+  const $ = (id) => document.getElementById(id);
+  
   return {
-    petalCount,
-    petalLength,
-    petalColor,
-    stemHeight,
-    leafSize
+    petalCount: parseInt($("petalCount")?.value || "9", 10),
+    petalLength: parseFloat($("petalLength")?.value || "1.8", 10),
+    petalWidth: parseFloat($("petalWidth")?.value || "0.42", 10),
+    petalCurl: parseFloat($("petalCurl")?.value || "0.35", 10),
+    bloomOpenness: parseFloat($("bloomOpenness")?.value || "0.78", 10),
+    petalShape: $("petalShape")?.value || "long",
+    petalEdge: $("petalEdge")?.value || "ruffled",
+    petalLayers: $("petalLayers")?.value || "double",
+    colorBase: $("colorBase")?.value || "#3a1670",
+    colorTip: $("colorTip")?.value || "#da9cff",
+    stemHeight: parseFloat($("stemHeight")?.value || "2.1", 10),
+    stemColor: $("stemColor")?.value || "#28643a",
+    leafCount: parseInt($("leafCount")?.value || "7", 10),
+    leafLength: parseFloat($("leafLength")?.value || "0.72", 10),
+    leafWidth: parseFloat($("leafWidth")?.value || "0.24", 10),
+    leafEdge: $("leafEdge")?.value || "jagged",
+    leafPattern: $("leafPattern")?.value || "variegated",
+    leafColor: $("leafColor")?.value || "#1b5b35",
+    variegationColor: $("variegationColor")?.value || "#d2e6ab",
+    stamenCount: parseInt($("stamenCount")?.value || "12", 10),
+    stamenHeight: parseFloat($("stamenHeight")?.value || "0.66", 10),
+    filamentColor: $("filamentColor")?.value || "#f3e9ff",
+    antherColor: $("antherColor")?.value || "#d78b18",
+    pollenAmount: parseInt($("pollenAmount")?.value || "38", 10),
+    pollenSize: parseFloat($("pollenSize")?.value || "0.025", 10),
+    pollenColor: $("pollenColor")?.value || "#ffe06d"
   };
 }
 
-export function createSpeciesFromCurrentFlower(name = null) {
-  const flowerData = getCurrentFlowerData();
-
+export function createSpeciesFromCurrentDesign(name = null) {
+  const p = readCurrentDesignParams();
+  
   const species = {
     id: `custom-${Date.now()}`,
-    name: name || `Custom Flower ${new Date().toLocaleTimeString()}`,
+    name: name || `Abstract Bloom ${new Date().toLocaleTimeString()}`,
     generation: 0,
     parents: [],
-    lineage_notes: "Exported from flower designer",
+    lineage_notes: "Exported from Abstract Bloom Lab",
 
     morphology: {
       growth_form: "erect_herb",
 
       stem: {
-        height: flowerData.stemHeight,
-        thickness: 0.3,
+        height: p.stemHeight,
+        thickness: 0.35,
         branching: "sparse",
         flexibility: 0.5
       },
@@ -42,38 +57,38 @@ export function createSpeciesFromCurrentFlower(name = null) {
       leaves: {
         arrangement: "alternate",
         shape: "lanceolate",
-        edge: "smooth",
-        size: flowerData.leafSize,
+        edge: p.leafEdge,
+        size: p.leafLength * 0.7,
         thickness: 0.4,
-        variegation: false,
-        pattern: "none",
+        variegation: p.leafPattern === "variegated",
+        pattern: p.leafPattern === "variegated" ? "mottled" : "none",
         orientation: "horizontal"
       },
 
       bud: {
         shape: "pointed",
         surface: "smooth",
-        color: "#4a7c3a"
+        color: p.stemColor
       },
 
       flower: {
         symmetry: "radial",
-        petal_count: flowerData.petalCount,
-        petal_shape: "round",
-        petal_edge: "smooth",
-        petal_layers: "single",
-        petal_base_color: flowerData.petalColor,
-        petal_tip_color: flowerData.petalColor,
-        tube_length: 0.3,
-        opening_angle: 0.8,
+        petal_count: p.petalCount,
+        petal_shape: p.petalShape === "round" ? "round" : "long",
+        petal_edge: p.petalEdge,
+        petal_layers: p.petalLayers,
+        petal_base_color: p.colorBase,
+        petal_tip_color: p.colorTip,
+        tube_length: 0.3 + (1 - p.bloomOpenness) * 0.4,
+        opening_angle: p.bloomOpenness,
         uv_pattern: 0.3
       },
 
       reproductive_organs: {
-        stamen_count: flowerData.petalCount * 2,
-        stamen_length: 0.5,
+        stamen_count: p.stamenCount,
+        stamen_length: p.stamenHeight,
         stigma_shape: "knob",
-        stigma_height: 0.4
+        stigma_height: 0.5
       },
 
       defenses: {
@@ -145,12 +160,12 @@ export function createSpeciesFromCurrentFlower(name = null) {
       },
 
       flower_longevity: 5,
-      pollen_production: 0.6,
-      nectar_production: 0.6,
+      pollen_production: Math.min(1, p.pollenAmount / 80),
+      nectar_production: 0.6 + p.bloomOpenness * 0.2,
       scent_profile: "sweet",
 
       fruit_type: "capsule",
-      seed_count_range: [20, 50],
+      seed_count_range: [20 + p.stamenCount, 50 + p.stamenCount * 2],
       seed_size: "small",
       seed_dispersal: "wind",
       seed_dormancy: 0.2
@@ -214,28 +229,30 @@ export function createSpeciesFromCurrentFlower(name = null) {
   return species;
 }
 
-export function downloadCurrentFlowerAsSpecies() {
-  const species = createSpeciesFromCurrentFlower();
+export function downloadCurrentDesignAsSpecies() {
+  const species = createSpeciesFromCurrentDesign();
   const json = JSON.stringify(species, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
+  const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
-  a.download = `${species.name.replace(/\s+/g, '-').toLowerCase()}.json`;
+  a.download = `${species.name.replace(/\s+/g, "-").toLowerCase()}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 
-  // Show feedback
-  alert(`Exported "${species.name}" as ${a.download}\n\nUpload this file to simulation-demo.html to use it in the ecosystem!`);
+  alert(
+    `Exported "${species.name}" as ${a.download}\n\n` +
+    `Upload this file to simulation-demo.html to use it in the ecosystem!`
+  );
 }
 
 export function initializeExportButton() {
-  const exportBtn = document.getElementById('exportSpeciesBtn');
+  const exportBtn = document.getElementById("exportSpeciesBtn");
   if (exportBtn) {
-    exportBtn.addEventListener('click', () => {
-      downloadCurrentFlowerAsSpecies();
+    exportBtn.addEventListener("click", () => {
+      downloadCurrentDesignAsSpecies();
     });
   }
 }
