@@ -6,15 +6,15 @@ import { pollinatorVisit, findNearestFloweringPlant, simulatePollinatorMovement 
 import { createSeedManager, addSeeds, processSeedDormancy, processGerminatedSeeds } from './simulation/seed/index.js';
 import { loadSpeciesFromFile, createSpeciesLibrary } from './simulation/species-loader.js';
 
-// ===== THREE.JS SETUP =====
+// ===== THREE.JS ENGINE =====
 
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050505);
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
-camera.position.set(0, 30, 50);
-camera.lookAt(0, 10, 0);
+camera.position.set(0, 32, 52);
+camera.lookAt(0, 8, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -22,19 +22,19 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 
 function resizeCanvas() {
-  const width = container.clientWidth || window.innerWidth;
-  const height = container.clientHeight || 400;
-  camera.aspect = width / height;
+  const w = container.clientWidth || window.innerWidth;
+  const h = container.clientHeight || 320;
+  camera.aspect = w / h;
   camera.updateProjectionMatrix();
-  renderer.setSize(width, height);
+  renderer.setSize(w, h);
 }
 window.addEventListener('resize', resizeCanvas);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
-keyLight.position.set(20, 40, 20);
+scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.3);
+keyLight.position.set(20, 45, 25);
 scene.add(keyLight);
-const rimLight = new THREE.DirectionalLight(0x9d7cff, 0.5);
+const rimLight = new THREE.DirectionalLight(0x9d7cff, 0.6);
 rimLight.position.set(-30, 20, -30);
 scene.add(rimLight);
 
@@ -77,7 +77,7 @@ const moonCrest = createSpeciesFromTemplate(defaultPlantSpecies, {
     ...defaultPlantSpecies.reproduction,
     pollination_syndrome: "moth",
     scent_profile: "sweet-night",
-    flowering_time: { start_day: 5, duration_days: 60, season: "late_spring" },
+    flowering_time: { start_day: 0, duration_days: 100, season: "late_spring" },
     nectar_production: 0.8
   }
 });
@@ -99,7 +99,7 @@ const emberBell = createSpeciesFromTemplate(defaultPlantSpecies, {
     ...defaultPlantSpecies.reproduction,
     pollination_syndrome: "butterfly",
     scent_profile: "spiced",
-    flowering_time: { start_day: 10, duration_days: 60, season: "late_spring" },
+    flowering_time: { start_day: 0, duration_days: 100, season: "late_spring" },
     nectar_production: 0.7
   }
 });
@@ -107,11 +107,11 @@ const emberBell = createSpeciesFromTemplate(defaultPlantSpecies, {
 speciesLibrary.add(moonCrest);
 speciesLibrary.add(emberBell);
 
-// ===== 3D PLANT BUILDER =====
+// ===== 3D BUILDERS =====
 
 function createPlantMesh(species, position) {
   const group = new THREE.Group();
-  const stemHeight = (species.morphology?.stem?.height || 2) * 3;
+  const stemHeight = (species.morphology?.stem?.height || 2) * 2.8;
   
   const stemColor = species.morphology?.bud?.color || species.morphology?.stemColor || "#28643a";
   const stemGeo = new THREE.CylinderGeometry(0.12, 0.22, stemHeight, 10);
@@ -120,7 +120,6 @@ function createPlantMesh(species, position) {
   stem.position.y = stemHeight / 2;
   group.add(stem);
   
-  // Leaves
   const leafCount = 6;
   const leafColor = species.morphology?.leaves?.variegation ? 0xd2e6ab : 0x1b5b35;
   for (let i = 0; i < leafCount; i++) {
@@ -135,7 +134,6 @@ function createPlantMesh(species, position) {
     group.add(leaf);
   }
   
-  // Flower
   const flowerGroup = new THREE.Group();
   const petalCount = species.morphology?.flower?.petal_count || 5;
   const baseColor = new THREE.Color(species.morphology?.flower?.petal_base_color || "#ff6b9e");
@@ -158,7 +156,6 @@ function createPlantMesh(species, position) {
     flowerGroup.add(petal);
   }
   
-  // Flower center
   const centerGeo = new THREE.SphereGeometry(0.35, 10, 8);
   const centerMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.4, emissive: 0x332200 });
   const center = new THREE.Mesh(centerGeo, centerMat);
@@ -167,7 +164,6 @@ function createPlantMesh(species, position) {
   
   group.add(flowerGroup);
   
-  // Thorns
   if (species.morphology?.defenses?.thorn_presence) {
     const thornMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.6 });
     for (let i = 0; i < 6; i++) {
@@ -181,7 +177,6 @@ function createPlantMesh(species, position) {
     }
   }
 
-  // Carnivorous trap
   if (species.carnivorous?.enabled || species.physiology?.nutrients?.special_strategy === "carnivorous") {
     const trapMat = new THREE.MeshStandardMaterial({ color: 0xff1493, roughness: 0.3, emissive: 0x440022 });
     const trapGeo = new THREE.SphereGeometry(0.5, 10, 8);
@@ -198,7 +193,7 @@ function createPlantMesh(species, position) {
 
 function createPollinatorMesh(species, position) {
   const group = new THREE.Group();
-  const bodyGeo = new THREE.SphereGeometry(0.4, 8, 6);
+  const bodyGeo = new THREE.SphereGeometry(0.45, 8, 6);
   const bodyMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(species.body?.color || "#f4c542"), roughness: 0.5 });
   const body = new THREE.Mesh(bodyGeo, bodyMat);
   group.add(body);
@@ -218,7 +213,7 @@ function createPollinatorMesh(species, position) {
   return group;
 }
 
-// ===== INITIALIZATION =====
+// ===== INITIALIZE SYSTEM =====
 
 function initializeSimulation() {
   plantMeshes.forEach(mesh => scene.remove(mesh));
@@ -254,6 +249,7 @@ function initializeSimulation() {
   
   updateStats();
   updateLegend();
+  updateSpeciesList();
 }
 
 // ===== SIMULATION LOOP =====
@@ -263,7 +259,7 @@ const deltaTime = 1;
 function simulationStep() {
   if (!isRunning) return;
   
-  currentDay += deltaTime * 0.15;
+  currentDay += deltaTime * 0.2;
   const plantsInBloom = getPlantsInBloom(field, currentDay);
   const timeOfDay = currentDay % 24;
   const activePollinators = getPollinatorsActive(field, timeOfDay);
@@ -308,15 +304,22 @@ function simulationStep() {
 // ===== UI HELPERS =====
 
 function updateStats() {
-  document.getElementById('dayStat').textContent = Math.floor(currentDay);
-  document.getElementById('plantsStat').textContent = field.plants.length;
-  document.getElementById('pollinatorsStat').textContent = field.pollinators.length;
-  document.getElementById('seedsStat').textContent = seedManager.seeds.length;
-  document.getElementById('pollinationsStat').textContent = totalPollinations;
+  const d = document.getElementById('dayStat');
+  const p = document.getElementById('plantsStat');
+  const pol = document.getElementById('pollinatorsStat');
+  const s = document.getElementById('seedsStat');
+  const polCount = document.getElementById('pollinationsStat');
+
+  if (d) d.textContent = Math.floor(currentDay);
+  if (p) p.textContent = field ? field.plants.length : 0;
+  if (pol) pol.textContent = field ? field.pollinators.length : 0;
+  if (s) s.textContent = seedManager ? seedManager.seeds.length : 0;
+  if (polCount) polCount.textContent = totalPollinations;
 }
 
 function updateLegend() {
   const container = document.getElementById('legendContainer');
+  if (!container) return;
   container.innerHTML = '';
   customSpeciesList.forEach(species => {
     const color = species.morphology?.flower?.petal_base_color || '#fff';
@@ -329,6 +332,7 @@ function updateLegend() {
 
 function updateSpeciesList() {
   const container = document.getElementById('speciesList');
+  if (!container) return;
   container.innerHTML = '';
   customSpeciesList.forEach(species => {
     const color = species.morphology?.flower?.petal_base_color || '#fff';
@@ -341,6 +345,7 @@ function updateSpeciesList() {
 
 function logEvent(message, type = "info") {
   const log = document.getElementById('eventLog');
+  if (!log) return;
   const entry = document.createElement('div');
   entry.className = `log-entry ${type}`;
   entry.textContent = message;
@@ -348,37 +353,34 @@ function logEvent(message, type = "info") {
   log.scrollTop = log.scrollHeight;
 }
 
-// ===== DIRECT MOBILE-SAFE FILE INPUT =====
+// ===== FILE INPUT EVENT =====
 
 const fileInput = document.getElementById('fileInput');
+if (fileInput) {
+  fileInput.addEventListener('change', async (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
 
-fileInput.addEventListener('change', async (event) => {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
+    logEvent(`Reading file: ${file.name}...`, "info");
 
-  logEvent(`Reading file: ${file.name}...`, "info");
+    try {
+      const species = await loadSpeciesFromFile(file);
+      customSpeciesList.push(species);
+      speciesLibrary.add(species);
+      
+      logEvent(`✓ Loaded: "${species.name}"`, "success");
+      initializeSimulation();
+    } catch (err) {
+      logEvent(`✗ Upload error: ${err.message}`, "warning");
+    }
 
-  try {
-    const species = await loadSpeciesFromFile(file);
-    customSpeciesList.push(species);
-    speciesLibrary.add(species);
-    
-    logEvent(`✓ Added species: "${species.name}"`, "success");
-    updateSpeciesList();
-    updateLegend();
-    initializeSimulation();
-  } catch (err) {
-    logEvent(`✗ Upload error: ${err.message}`, "warning");
-    alert(`Could not load file: ${err.message}`);
-  }
+    fileInput.value = '';
+  });
+}
 
-  // Clear so user can re-upload
-  fileInput.value = '';
-});
+// ===== BUTTON CONTROLS =====
 
-// ===== CONTROLS =====
-
-document.getElementById('startBtn').addEventListener('click', () => {
+document.getElementById('startBtn')?.addEventListener('click', () => {
   if (!isRunning) {
     isRunning = true;
     logEvent("Simulation running...", "info");
@@ -386,21 +388,22 @@ document.getElementById('startBtn').addEventListener('click', () => {
   }
 });
 
-document.getElementById('pauseBtn').addEventListener('click', () => {
+document.getElementById('pauseBtn')?.addEventListener('click', () => {
   isRunning = false;
   if (animationId) cancelAnimationFrame(animationId);
   logEvent("Paused", "warning");
 });
 
-document.getElementById('resetBtn').addEventListener('click', () => {
+document.getElementById('resetBtn')?.addEventListener('click', () => {
   isRunning = false;
   if (animationId) cancelAnimationFrame(animationId);
-  document.getElementById('eventLog').innerHTML = '';
+  const log = document.getElementById('eventLog');
+  if (log) log.innerHTML = '';
   initializeSimulation();
   logEvent("Simulation reset to day 0", "info");
 });
 
-// ===== ANIMATE =====
+// ===== ANIMATION =====
 
 function animate() {
   requestAnimationFrame(animate);
@@ -408,11 +411,10 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-// ===== STARTUP =====
+// ===== BOOTSTRAP =====
 
 resizeCanvas();
 speciesLibrary.getAll().forEach(s => customSpeciesList.push(s));
 initializeSimulation();
-updateSpeciesList();
-logEvent("System ready. Choose a file above to add custom flowers.", "info");
+logEvent("System ready. Founder species loaded.", "info");
 animate();
