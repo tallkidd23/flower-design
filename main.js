@@ -53,16 +53,14 @@ scene.add(fillLight);
 const flower = new THREE.Group();
 scene.add(flower);
 
-// ===== HIGH-CONTRAST PROCEDURAL TEXTURE GENERATORS (WITH NORMAL MAPS) =====
+// ===== HIGH-CONTRAST PROCEDURAL TEXTURE GENERATORS =====
 
 function createPetalMaps(baseHex, tipHex, uvStrength = 0.4) {
-  // 1. Diffuse / Albedo Map
   const dCanvas = document.createElement("canvas");
   dCanvas.width = 512;
   dCanvas.height = 512;
   const dCtx = dCanvas.getContext("2d");
 
-  // Longitudinal Gradient (v=0 throat -> v=1 tip)
   const grad = dCtx.createLinearGradient(0, 0, 0, 512);
   grad.addColorStop(0, baseHex);
   grad.addColorStop(0.35, baseHex);
@@ -71,21 +69,18 @@ function createPetalMaps(baseHex, tipHex, uvStrength = 0.4) {
   dCtx.fillStyle = grad;
   dCtx.fillRect(0, 0, 512, 512);
 
-  // 2. Normal Map Canvas (for physical light displacement)
   const nCanvas = document.createElement("canvas");
   nCanvas.width = 512;
   nCanvas.height = 512;
   const nCtx = nCanvas.getContext("2d");
-  nCtx.fillStyle = "rgb(128, 128, 255)"; // Flat normal neutral
+  nCtx.fillStyle = "rgb(128, 128, 255)";
   nCtx.fillRect(0, 0, 512, 512);
 
-  // High-Contrast Veins & Normal Creases
   for (let i = 0; i <= 36; i++) {
     const normX = i / 36;
     const xPos = normX * 512;
     const spread = (normX - 0.5) * 60;
 
-    // Diffuse highlight
     dCtx.beginPath();
     dCtx.moveTo(xPos, 0);
     dCtx.bezierCurveTo(xPos + spread * 0.4, 160, xPos + spread * 0.8, 360, xPos + spread, 512);
@@ -93,7 +88,6 @@ function createPetalMaps(baseHex, tipHex, uvStrength = 0.4) {
     dCtx.lineWidth = 2.4;
     dCtx.stroke();
 
-    // Diffuse shadow trench
     dCtx.beginPath();
     dCtx.moveTo(xPos + 1.5, 0);
     dCtx.bezierCurveTo(xPos + spread * 0.4 + 1.5, 160, xPos + spread * 0.8 + 1.5, 360, xPos + spread + 1.5, 512);
@@ -101,7 +95,6 @@ function createPetalMaps(baseHex, tipHex, uvStrength = 0.4) {
     dCtx.lineWidth = 2.0;
     dCtx.stroke();
 
-    // Normal Map Left/Right bevels
     nCtx.beginPath();
     nCtx.moveTo(xPos - 1, 0);
     nCtx.bezierCurveTo(xPos + spread * 0.4 - 1, 160, xPos + spread * 0.8 - 1, 360, xPos + spread - 1, 512);
@@ -117,7 +110,6 @@ function createPetalMaps(baseHex, tipHex, uvStrength = 0.4) {
     nCtx.stroke();
   }
 
-  // Botanical Freckles / Spots
   for (let s = 0; s < 140; s++) {
     const spotX = 256 + (Math.random() - 0.5) * 440 * (1 - s / 180);
     const spotY = 15 + Math.random() * 160;
@@ -133,14 +125,12 @@ function createPetalMaps(baseHex, tipHex, uvStrength = 0.4) {
     dCtx.fillStyle = "rgba(255, 210, 240, 0.35)";
     dCtx.fill();
 
-    // Bump pit in normal map
     nCtx.beginPath();
     nCtx.arc(spotX, spotY, r, 0, Math.PI * 2);
     nCtx.fillStyle = "rgb(128, 100, 230)";
     nCtx.fill();
   }
 
-  // UV Guide Lines
   if (uvStrength > 0.05) {
     for (let u = -4; u <= 4; u++) {
       dCtx.beginPath();
@@ -189,7 +179,6 @@ function createLeafMaps(leafHex, varHex, pattern = "variegated") {
     }
   }
 
-  // Midrib
   dCtx.beginPath();
   dCtx.moveTo(256, 0);
   dCtx.lineTo(256, 512);
@@ -211,7 +200,6 @@ function createLeafMaps(leafHex, varHex, pattern = "variegated") {
   nCtx.lineWidth = 4;
   nCtx.stroke();
 
-  // Lateral Secondary Veins
   for (let y = 20; y < 500; y += 32) {
     dCtx.beginPath();
     dCtx.moveTo(256, y);
@@ -227,7 +215,6 @@ function createLeafMaps(leafHex, varHex, pattern = "variegated") {
     dCtx.lineWidth = 2.5;
     dCtx.stroke();
 
-    // Normal map ridge
     nCtx.beginPath();
     nCtx.moveTo(256, y);
     nCtx.quadraticCurveTo(140, y + 25, 0, y + 45);
@@ -407,34 +394,87 @@ function createMaterial(color, options = {}) {
   });
 }
 
-function makeRibbonGeometry(points, widths) {
-  const positions = [], normals = [], uvs = [], indices = [];
-  for (let i = 0; i < points.length; i++) {
-    const t = i / (points.length - 1);
+// ===== VOLUMETRIC 3D SOLID STRIP GEOMETRY (WITH NATURAL TAPER & THICKNESS) =====
+
+function makeSolidVolumeGeometry(points, widths, baseThickness = 0.04) {
+  const segCount = points.length;
+  const positions = [];
+  const uvs = [];
+  const indices = [];
+
+  // Generate 4 vertices per cross-section:
+  // 0: Top Left, 1: Top Right, 2: Bottom Right, 3: Bottom Left
+  for (let i = 0; i < segCount; i++) {
+    const t = i / (segCount - 1);
     const before = points[Math.max(0, i - 1)];
-    const after = points[Math.min(points.length - 1, i + 1)];
+    const after = points[Math.min(segCount - 1, i + 1)];
     const tangent = after.clone().sub(before).normalize();
-    let side = new THREE.Vector3(0, 1, 0).cross(tangent);
+    
+    let normal = new THREE.Vector3(0, 1, 0);
+    let side = normal.clone().cross(tangent);
     if (side.lengthSq() < 0.0001) side = new THREE.Vector3(1, 0, 0);
-    side.normalize().multiplyScalar(widths[i] / 2);
+    side.normalize();
+    
+    const up = tangent.clone().cross(side).normalize();
 
-    positions.push(points[i].x + side.x, points[i].y + side.y, points[i].z + side.z);
-    normals.push(0, 1, 0);
-    uvs.push(0, t);
+    const halfW = widths[i] / 2;
+    // Taper thickness: thick succulent base, thin delicate tip
+    const currentThick = baseThickness * Math.max(0.08, (1.0 - t * 0.85) * Math.sin(t * Math.PI * 0.8 + 0.2));
 
-    positions.push(points[i].x - side.x, points[i].y - side.y, points[i].z - side.z);
-    normals.push(0, 1, 0);
-    uvs.push(1, t);
+    const p = points[i];
+    const tl = p.clone().addScaledVector(side, halfW).addScaledVector(up, currentThick * 0.5);
+    const tr = p.clone().addScaledVector(side, -halfW).addScaledVector(up, currentThick * 0.5);
+    const br = p.clone().addScaledVector(side, -halfW).addScaledVector(up, -currentThick * 0.5);
+    const bl = p.clone().addScaledVector(side, halfW).addScaledVector(up, -currentThick * 0.5);
+
+    positions.push(
+      tl.x, tl.y, tl.z,
+      tr.x, tr.y, tr.z,
+      br.x, br.y, br.z,
+      bl.x, bl.y, bl.z
+    );
+
+    uvs.push(
+      0, t,
+      1, t,
+      1, t,
+      0, t
+    );
   }
 
-  for (let i = 0; i < points.length - 1; i++) {
-    const a = i * 2;
-    indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+  // Connect quad strips around the solid volume: Top, Right, Bottom, Left
+  for (let i = 0; i < segCount - 1; i++) {
+    const r1 = i * 4;
+    const r2 = (i + 1) * 4;
+
+    // Top face (0 -> 1)
+    indices.push(r1 + 0, r2 + 0, r1 + 1);
+    indices.push(r1 + 1, r2 + 0, r2 + 1);
+
+    // Right side face (1 -> 2)
+    indices.push(r1 + 1, r2 + 1, r1 + 2);
+    indices.push(r1 + 2, r2 + 1, r2 + 2);
+
+    // Bottom face (2 -> 3)
+    indices.push(r1 + 2, r2 + 2, r1 + 3);
+    indices.push(r1 + 3, r2 + 2, r2 + 3);
+
+    // Left side face (3 -> 0)
+    indices.push(r1 + 3, r2 + 3, r1 + 0);
+    indices.push(r1 + 0, r2 + 3, r2 + 0);
   }
+
+  // End Cap (Base)
+  indices.push(0, 1, 2);
+  indices.push(0, 2, 3);
+
+  // End Cap (Tip)
+  const tipStart = (segCount - 1) * 4;
+  indices.push(tipStart + 0, tipStart + 2, tipStart + 1);
+  indices.push(tipStart + 0, tipStart + 3, tipStart + 2);
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
   geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
@@ -537,13 +577,12 @@ function buildLeaves(params, grown) {
     });
 
     const leaf = new THREE.Mesh(
-      makeRibbonGeometry(points, widths),
+      makeSolidVolumeGeometry(points, widths, 0.045),
       new THREE.MeshStandardMaterial({
         map: leafMaps.diffuse,
         normalMap: leafMaps.normal,
         normalScale: new THREE.Vector2(0.9, 0.9),
-        roughness: 0.42,
-        side: THREE.DoubleSide
+        roughness: 0.42
       })
     );
     add(leaf);
@@ -604,14 +643,13 @@ function buildPetals(params, stemTop) {
       });
       
       const petal = new THREE.Mesh(
-        makeRibbonGeometry(points, widths),
+        makeSolidVolumeGeometry(points, widths, 0.038),
         new THREE.MeshStandardMaterial({
           map: petalMaps.diffuse,
           normalMap: petalMaps.normal,
           normalScale: new THREE.Vector2(1.2, 1.2),
           roughness: 0.26,
-          metalness: 0.02,
-          side: THREE.DoubleSide
+          metalness: 0.02
         })
       );
       add(petal);
