@@ -39,7 +39,7 @@ let dragStartYaw = 0;
 const ids = [
   "petalCount", "petalLength", "petalWidth", "petalCurl", "bloomOpenness",
   "petalShape", "petalEdge", "petalLayers", "colorBase", "colorTip",
-  "stemHeight", "stemColor", "leafCount", "leafLength", "leafWidth",
+  "stemHeight", "stemWidth", "stemColor", "leafCount", "leafLength", "leafWidth",
   "leafEdge", "leafPattern", "leafColor", "variegationColor",
   "stamenCount", "stamenHeight", "filamentColor", "antherColor",
   "pollenAmount", "pollenSize", "pollenColor", "growthSpeed",
@@ -66,7 +66,7 @@ ui.loadFile = $("loadFile");
 
 const outputIds = [
   "petalCount", "petalLength", "petalWidth", "petalCurl", "bloomOpenness",
-  "stemHeight", "leafCount", "leafLength", "leafWidth",
+  "stemHeight", "stemWidth", "leafCount", "leafLength", "leafWidth",
   "stamenCount", "stamenHeight", "pollenAmount", "pollenSize", "growthSpeed",
   "thornDensity", "thornLength", "trichomeDensity",
   "trapSize", "nectarGlow", "captureSpeed",
@@ -78,15 +78,18 @@ const outputs = Object.fromEntries(outputIds.map((id) => [id, $(`${id}Value`)]))
 function readParams() {
   const params = {};
   for (const id of ids) {
+    if (!ui[id]) continue;
     params[id] = ui[id].type === "range" ? Number(ui[id].value) : ui[id].value;
   }
   return params;
 }
 
 function syncOutputs() {
-  for (const id of outputIds) outputs[id].textContent = ui[id].value;
-  ui.dayValue.textContent = Math.round(day);
-  ui.daySlider.value = Math.round(day);
+  for (const id of outputIds) {
+    if (outputs[id] && ui[id]) outputs[id].textContent = ui[id].value;
+  }
+  if (ui.dayValue) ui.dayValue.textContent = Math.round(day);
+  if (ui.daySlider) ui.daySlider.value = Math.round(day);
 }
 
 function plantGrowth(dayValue) {
@@ -148,52 +151,56 @@ function makeRibbonGeometry(points, widths) {
 
 function buildStem(params, grown) {
   const height = Math.max(0.025, params.stemHeight * grown);
-  const geometry = new THREE.CylinderGeometry(0.045, 0.095, height, 12);
+  const widthMultiplier = (params.stemWidth || 0.35) * 2.8;
+  const topRadius = 0.045 * widthMultiplier;
+  const bottomRadius = 0.095 * widthMultiplier;
+
+  const geometry = new THREE.CylinderGeometry(topRadius, bottomRadius, height, 14);
   const stem = new THREE.Mesh(geometry, createMaterial(params.stemColor, { roughness: 0.84 }));
   stem.position.y = height / 2;
   add(stem);
   
   // Build thorns on stem
-  if (params.thornPresence === "true") buildThorns(params, stem.position.y, height, "stem");
+  if (params.thornPresence === "true") buildThorns(params, stem.position.y, height, topRadius);
   
   // Build trichomes
-  if (params.trichomeDensity > 0.05) buildTrichomes(params, stem.position.y, height, "stem");
+  if (params.trichomeDensity > 0.05) buildTrichomes(params, stem.position.y, height, topRadius);
 }
 
-function buildThorns(params, startY, stemHeight, location) {
-  const thornCount = Math.round(params.thornDensity * 12);
-  const thornLength = params.thornLength * 0.4;
+function buildThorns(params, startY, stemHeight, stemRadius) {
+  const thornCount = Math.round(params.thornDensity * 14);
+  const thornLength = params.thornLength * 0.45;
   
   for (let i = 0; i < thornCount; i++) {
-    const angle = (i / thornCount) * Math.PI * 2;
-    const y = startY + Math.random() * stemHeight * 0.8;
+    const angle = (i / thornCount) * Math.PI * 2 + (i * 0.4);
+    const y = startY + (Math.random() - 0.5) * stemHeight * 0.75;
     
-    const thornGeo = new THREE.ConeGeometry(0.015, thornLength, 8);
+    const thornGeo = new THREE.ConeGeometry(0.02 * stemRadius * 15, thornLength, 8);
     const thorn = new THREE.Mesh(thornGeo, createMaterial(params.thornColor, { roughness: 0.6 }));
     
-    thorn.position.set(Math.cos(angle) * 0.1, y, Math.sin(angle) * 0.1);
-    thorn.rotation.x = Math.PI / 2 - 0.3;
+    thorn.position.set(Math.cos(angle) * (stemRadius + 0.02), y, Math.sin(angle) * (stemRadius + 0.02));
+    thorn.rotation.x = Math.PI / 2 - 0.25;
     thorn.rotation.z = angle;
     
-    if (params.thornShape === "curved") thorn.rotation.x += 0.2;
-    if (params.thornShape === "hooked") thorn.rotation.x += 0.4;
+    if (params.thornShape === "curved") thorn.rotation.x += 0.25;
+    if (params.thornShape === "hooked") thorn.rotation.x += 0.5;
     
     add(thorn);
   }
 }
 
-function buildTrichomes(params, startY, stemHeight, location) {
-  const trichomeCount = Math.round(params.trichomeDensity * 20);
+function buildTrichomes(params, startY, stemHeight, stemRadius) {
+  const trichomeCount = Math.round(params.trichomeDensity * 24);
   
   for (let i = 0; i < trichomeCount; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const y = startY + Math.random() * stemHeight;
+    const y = startY + (Math.random() - 0.5) * stemHeight * 0.9;
     
-    const hairGeo = new THREE.CylinderGeometry(0.003, 0.005, 0.08, 6);
-    const hair = new THREE.Mesh(hairGeo, createMaterial(params.stemColor, { roughness: 0.9, transparent: true, opacity: 0.7 }));
+    const hairGeo = new THREE.CylinderGeometry(0.003, 0.005, 0.09, 6);
+    const hair = new THREE.Mesh(hairGeo, createMaterial(params.stemColor, { roughness: 0.9, transparent: true, opacity: 0.75 }));
     
-    hair.position.set(Math.cos(angle) * 0.1, y, Math.sin(angle) * 0.1);
-    hair.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.5;
+    hair.position.set(Math.cos(angle) * (stemRadius + 0.01), y, Math.sin(angle) * (stemRadius + 0.01));
+    hair.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.4;
     
     add(hair);
   }
@@ -391,7 +398,6 @@ function buildCarnivorousStructures(params, stemTop) {
   const trapSize = params.trapSize * trapGrowth;
   
   if (params.trapType === "snap") {
-    // Venus flytrap-style lobes
     for (let side = -1; side <= 1; side += 2) {
       const lobeGeo = new THREE.SphereGeometry(trapSize * 0.5, 16, 12);
       const lobe = new THREE.Mesh(lobeGeo, createMaterial(params.lureColor, { roughness: 0.4, side: THREE.DoubleSide }));
@@ -400,7 +406,6 @@ function buildCarnivorousStructures(params, stemTop) {
       lobe.rotation.x = side * 0.3;
       add(lobe);
       
-      // Trigger hairs
       for (let h = 0; h < 5; h++) {
         const hairGeo = new THREE.CylinderGeometry(0.005, 0.008, trapSize * 0.3, 6);
         const hair = new THREE.Mesh(hairGeo, createMaterial(params.stemColor, { roughness: 0.8 }));
@@ -409,21 +414,18 @@ function buildCarnivorousStructures(params, stemTop) {
       }
     }
   } else if (params.trapType === "pitcher") {
-    // Pitcher trap
     const pitcherGeo = new THREE.CylinderGeometry(trapSize * 0.3, trapSize * 0.5, trapSize * 0.8, 12);
     const pitcher = new THREE.Mesh(pitcherGeo, createMaterial(params.lureColor, { roughness: 0.5, transparent: true, opacity: 0.9 }));
     pitcher.position.set(0, stemTop + trapSize * 0.4, 0);
     pitcher.rotation.x = 0.3;
     add(pitcher);
     
-    // Digestive fluid
     const fluidGeo = new THREE.CylinderGeometry(trapSize * 0.25, trapSize * 0.45, trapSize * 0.3, 12);
     const fluid = new THREE.Mesh(fluidGeo, createMaterial(params.digestiveFluidColor, { roughness: 0.3, transparent: true, opacity: 0.7 }));
     fluid.position.set(0, stemTop + trapSize * 0.2, 0);
     fluid.rotation.x = 0.3;
     add(fluid);
   } else if (params.trapType === "sticky") {
-    // Sticky glandular hairs
     for (let i = 0; i < 15; i++) {
       const angle = (i / 15) * Math.PI * 2;
       const stalkGeo = new THREE.CylinderGeometry(0.008, 0.012, trapSize * 0.4, 8);
@@ -437,14 +439,12 @@ function buildCarnivorousStructures(params, stemTop) {
       add(gland);
     }
   } else if (params.trapType === "bladder") {
-    // Bladder trap pouch
     const bladderGeo = new THREE.SphereGeometry(trapSize * 0.4, 16, 12);
     const bladder = new THREE.Mesh(bladderGeo, createMaterial(params.lureColor, { roughness: 0.4, transparent: true, opacity: 0.85 }));
     bladder.position.set(0, stemTop + trapSize * 0.3, 0);
     bladder.scale.set(0.8, 1.2, 0.8);
     add(bladder);
     
-    // Trap door
     const doorGeo = new THREE.SphereGeometry(trapSize * 0.15, 10, 8);
     const door = new THREE.Mesh(doorGeo, createMaterial(params.digestiveFluidColor, { roughness: 0.5 }));
     door.position.set(0, stemTop + trapSize * 0.1, trapSize * 0.35);
@@ -491,6 +491,7 @@ function randomizeFlower() {
   ui.colorBase.value = randomHexColor();
   ui.colorTip.value = randomHexColor();
   ui.stemHeight.value = (1 + Math.random() * 2.1).toFixed(1);
+  ui.stemWidth.value = (0.15 + Math.random() * 0.65).toFixed(2);
   ui.leafCount.value = String(3 + Math.floor(Math.random() * 10));
   ui.leafLength.value = (0.35 + Math.random() * 0.85).toFixed(2);
   ui.leafWidth.value = (0.12 + Math.random() * 0.32).toFixed(2);
@@ -506,7 +507,6 @@ function randomizeFlower() {
   ui.pollenSize.value = (0.014 + Math.random() * 0.032).toFixed(3);
   ui.pollenColor.value = randomHexColor();
   
-  // Randomize defenses
   ui.thornPresence.value = Math.random() > 0.5 ? "true" : "false";
   ui.thornDensity.value = (Math.random() * 0.8).toFixed(2);
   ui.thornLength.value = (0.2 + Math.random() * 0.5).toFixed(2);
@@ -514,14 +514,12 @@ function randomizeFlower() {
   ui.thornColor.value = randomHexColor();
   ui.trichomeDensity.value = (Math.random() * 0.7).toFixed(2);
   
-  // Randomize carnivorous
   ui.carnivorousMode.value = Math.random() > 0.7 ? "true" : "false";
   ui.trapType.value = ["snap", "pitcher", "sticky", "bladder"][Math.floor(Math.random() * 4)];
   ui.trapSize.value = (0.3 + Math.random() * 0.7).toFixed(2);
   ui.lureColor.value = randomHexColor();
   ui.digestiveFluidColor.value = randomHexColor();
   
-  // Randomize physiology
   ui.scentProfile.value = ["sweet", "spiced", "fruity", "floral", "musky", "none"][Math.floor(Math.random() * 6)];
   ui.uvPattern.value = (Math.random() * 0.8).toFixed(2);
   
@@ -529,7 +527,10 @@ function randomizeFlower() {
   rebuildFlower();
 }
 
-for (const id of ids) ui[id].addEventListener("input", rebuildFlower);
+for (const id of ids) {
+  if (ui[id]) ui[id].addEventListener("input", rebuildFlower);
+}
+
 ui.daySlider.addEventListener("input", () => { day = Number(ui.daySlider.value); rebuildFlower(); });
 ui.playPauseBtn.addEventListener("click", () => { playing = !playing; ui.playPauseBtn.textContent = playing ? "Pause" : "Play"; });
 ui.resetBtn.addEventListener("click", () => { playing = false; ui.playPauseBtn.textContent = "Play"; day = 0; rebuildFlower(); });
@@ -554,7 +555,7 @@ ui.loadFile.addEventListener("change", (event) => {
   reader.onload = () => {
     try {
       const design = JSON.parse(reader.result);
-      for (const id of ids) if (design[id] !== undefined) ui[id].value = design[id];
+      for (const id of ids) if (design[id] !== undefined && ui[id]) ui[id].value = design[id];
       day = Number(design.day ?? totalDays);
       rebuildFlower();
     } catch { alert("That file is not a valid Abstract Bloom design."); }
