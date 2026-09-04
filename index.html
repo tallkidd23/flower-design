@@ -1,14 +1,15 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flower Designer</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Abstract Bloom Lab</title>
   <link rel="stylesheet" href="style.css">
   <style>
+    /* Export section styles */
     .export-section {
-      margin-top: 20px;
-      padding-top: 20px;
+      margin-top: 24px;
+      padding-top: 24px;
       border-top: 2px solid #e0e0e0;
     }
     .export-btn {
@@ -31,11 +32,11 @@
     .export-hint {
       font-size: 0.85rem;
       color: #666;
-      line-height: 1.4;
+      line-height: 1.5;
+      margin-bottom: 12px;
     }
     .simulation-link {
       display: block;
-      margin-top: 15px;
       padding: 12px;
       background: #f0f0f0;
       border-radius: 8px;
@@ -51,20 +52,262 @@
   </style>
 </head>
 <body>
-  <!-- Your original detailed editor content here -->
-  <!-- This preserves all your existing controls and layout -->
-  
-  <div class="export-section">
-    <button id="exportSpeciesBtn" class="export-btn">
-      📤 Export Species for Simulation
-    </button>
-    <p class="export-hint">
-      Export your flower design as a species JSON file, then upload it to the ecosystem simulation to see it evolve and cross-pollinate with other species.
-    </p>
-    <a href="simulation-demo.html" class="simulation-link">
-      🌿 Open Ecosystem Simulation
-    </a>
-  </div>
+  <main id="app">
+    <section id="canvas-container" aria-label="Interactive flower preview"></section>
+
+    <aside id="controls">
+      <header>
+        <p class="eyebrow">VIRTUAL BOTANY</p>
+        <h1>Abstract Bloom Lab</h1>
+        <p class="intro">Build a flower, then watch it grow.</p>
+      </header>
+
+      <section class="control-section">
+        <h2>Timeline</h2>
+
+        <label class="range-label" for="daySlider">
+          Day <output id="dayValue">0</output>
+          <span>/ 100</span>
+        </label>
+
+        <input id="daySlider" type="range" min="0" max="100" step="1" value="0">
+
+        <div class="button-grid two">
+          <button id="playPauseBtn" type="button">Play</button>
+          <button id="resetBtn" type="button">Seed</button>
+        </div>
+      </section>
+
+      <section class="control-section">
+        <h2>Petals</h2>
+
+        <div class="field">
+          <label for="petalCount">
+            Count <output id="petalCountValue">9</output>
+          </label>
+          <input id="petalCount" type="range" min="3" max="24" step="1" value="9">
+        </div>
+
+        <div class="field">
+          <label for="petalLength">
+            Length <output id="petalLengthValue">1.8</output>
+          </label>
+          <input id="petalLength" type="range" min="0.5" max="3.2" step="0.1" value="1.8">
+        </div>
+
+        <div class="field">
+          <label for="petalWidth">
+            Width <output id="petalWidthValue">0.42</output>
+          </label>
+          <input id="petalWidth" type="range" min="0.12" max="0.95" step="0.01" value="0.42">
+        </div>
+
+        <div class="field">
+          <label for="petalCurl">
+            Curl <output id="petalCurlValue">0.35</output>
+          </label>
+          <input id="petalCurl" type="range" min="-1" max="1" step="0.05" value="0.35">
+        </div>
+
+        <div class="field">
+          <label for="bloomOpenness">
+            Openness <output id="bloomOpennessValue">0.78</output>
+          </label>
+          <input id="bloomOpenness" type="range" min="0" max="1" step="0.02" value="0.78">
+        </div>
+
+        <div class="select-row">
+          <label>
+            Shape
+            <select id="petalShape">
+              <option value="round">Round</option>
+              <option value="long" selected>Long</option>
+            </select>
+          </label>
+
+          <label>
+            Edge
+            <select id="petalEdge">
+              <option value="smooth">Smooth</option>
+              <option value="ruffled" selected>Ruffled</option>
+            </select>
+          </label>
+
+          <label>
+            Layers
+            <select id="petalLayers">
+              <option value="single">Single</option>
+              <option value="double" selected>Double</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="color-row">
+          <label>
+            Base
+            <input id="colorBase" type="color" value="#3a1670">
+          </label>
+
+          <label>
+            Tip
+            <input id="colorTip" type="color" value="#da9cff">
+          </label>
+        </div>
+      </section>
+
+      <section class="control-section">
+        <h2>Stem &amp; leaves</h2>
+
+        <div class="field">
+          <label for="stemHeight">
+            Stem height <output id="stemHeightValue">2.1</output>
+          </label>
+          <input id="stemHeight" type="range" min="0.6" max="3.5" step="0.1" value="2.1">
+        </div>
+
+        <div class="field">
+          <label for="leafCount">
+            Leaf count <output id="leafCountValue">7</output>
+          </label>
+          <input id="leafCount" type="range" min="0" max="14" step="1" value="7">
+        </div>
+
+        <div class="field">
+          <label for="leafLength">
+            Leaf length <output id="leafLengthValue">0.72</output>
+          </label>
+          <input id="leafLength" type="range" min="0.25" max="1.4" step="0.01" value="0.72">
+        </div>
+
+        <div class="field">
+          <label for="leafWidth">
+            Leaf width <output id="leafWidthValue">0.24</output>
+          </label>
+          <input id="leafWidth" type="range" min="0.08" max="0.55" step="0.01" value="0.24">
+        </div>
+
+        <div class="select-row two-selects">
+          <label>
+            Leaf edge
+            <select id="leafEdge">
+              <option value="smooth">Smooth</option>
+              <option value="jagged" selected>Jagged</option>
+            </select>
+          </label>
+
+          <label>
+            Pattern
+            <select id="leafPattern">
+              <option value="solid">Solid</option>
+              <option value="variegated" selected>Variegated</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="color-row three">
+          <label>
+            Stem
+            <input id="stemColor" type="color" value="#28643a">
+          </label>
+
+          <label>
+            Leaf
+            <input id="leafColor" type="color" value="#1b5b35">
+          </label>
+
+          <label>
+            Variegation
+            <input id="variegationColor" type="color" value="#d2e6ab">
+          </label>
+        </div>
+      </section>
+
+      <section class="control-section">
+        <h2>Stamens &amp; pollen</h2>
+
+        <div class="field">
+          <label for="stamenCount">
+            Stamen count <output id="stamenCountValue">12</output>
+          </label>
+          <input id="stamenCount" type="range" min="0" max="30" step="1" value="12">
+        </div>
+
+        <div class="field">
+          <label for="stamenHeight">
+            Stamen height <output id="stamenHeightValue">0.66</output>
+          </label>
+          <input id="stamenHeight" type="range" min="0.15" max="1.4" step="0.01" value="0.66">
+        </div>
+
+        <div class="field">
+          <label for="pollenAmount">
+            Pollen grains <output id="pollenAmountValue">38</output>
+          </label>
+          <input id="pollenAmount" type="range" min="0" max="100" step="1" value="38">
+        </div>
+
+        <div class="field">
+          <label for="pollenSize">
+            Grain size <output id="pollenSizeValue">0.025</output>
+          </label>
+          <input id="pollenSize" type="range" min="0.008" max="0.06" step="0.001" value="0.025">
+        </div>
+
+        <div class="color-row three">
+          <label>
+            Filament
+            <input id="filamentColor" type="color" value="#f3e9ff">
+          </label>
+
+          <label>
+            Anther
+            <input id="antherColor" type="color" value="#d78b18">
+          </label>
+
+          <label>
+            Pollen
+            <input id="pollenColor" type="color" value="#ffe06d">
+          </label>
+        </div>
+      </section>
+
+      <section class="control-section">
+        <h2>Design</h2>
+
+        <div class="field">
+          <label for="growthSpeed">
+            Growth speed <output id="growthSpeedValue">1.0</output>
+          </label>
+          <input id="growthSpeed" type="range" min="0.2" max="3" step="0.1" value="1">
+        </div>
+
+        <div class="button-grid">
+          <button id="randomizeBtn" type="button">Randomize bloom</button>
+          <button id="saveBtn" type="button">Save design</button>
+          <button id="loadBtn" type="button">Load design</button>
+        </div>
+
+        <input id="loadFile" type="file" accept="application/json,.json" hidden>
+      </section>
+
+      <!-- Export for Simulation section -->
+      <section class="control-section export-section">
+        <h2>Export for Simulation</h2>
+
+        <button id="exportSpeciesBtn" type="button" class="export-btn">
+          📤 Export Species for Simulation
+        </button>
+
+        <p class="export-hint">
+          Export your flower as a species JSON file, then upload it to the ecosystem simulation to see it evolve and cross-pollinate with other species.
+        </p>
+
+        <a href="simulation-demo.html" class="simulation-link">
+          🌿 Open Ecosystem Simulation
+        </a>
+      </section>
+    </aside>
+  </main>
 
   <script type="module" src="main.js"></script>
 </body>
