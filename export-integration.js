@@ -5,6 +5,7 @@ export function readCurrentDesignParams() {
   const $ = (id) => document.getElementById(id);
   
   return {
+    petalArrangement: $("petalArrangement")?.value || "whorled",
     petalCount: parseInt($("petalCount")?.value || "9", 10),
     petalLength: parseFloat($("petalLength")?.value || "1.8", 10),
     petalWidth: parseFloat($("petalWidth")?.value || "0.42", 10),
@@ -16,6 +17,7 @@ export function readCurrentDesignParams() {
     colorBase: $("colorBase")?.value || "#3a1670",
     colorTip: $("colorTip")?.value || "#da9cff",
     stemHeight: parseFloat($("stemHeight")?.value || "2.1", 10),
+    stemWidth: parseFloat($("stemWidth")?.value || "0.35", 10),
     stemColor: $("stemColor")?.value || "#28643a",
     leafCount: parseInt($("leafCount")?.value || "7", 10),
     leafLength: parseFloat($("leafLength")?.value || "0.72", 10),
@@ -74,7 +76,7 @@ export function createSpeciesFromCurrentDesign(name = null) {
       growth_form: "erect_herb",
       stem: {
         height: p.stemHeight,
-        thickness: 0.35,
+        thickness: p.stemWidth,
         branching: "sparse",
         flexibility: 0.5
       },
@@ -95,6 +97,7 @@ export function createSpeciesFromCurrentDesign(name = null) {
       },
       flower: {
         symmetry: "radial",
+        arrangement: p.petalArrangement,
         petal_count: p.petalCount,
         petal_shape: p.petalShape,
         petal_edge: p.petalEdge,
@@ -222,19 +225,15 @@ export function createSpeciesFromCurrentDesign(name = null) {
 export function exportAndLaunchSimulation() {
   const species = createSpeciesFromCurrentDesign();
   
-  // Store directly in localStorage for instant seamless pickup
   try {
     const existing = JSON.parse(localStorage.getItem('bloom_custom_species') || '[]');
     existing.push(species);
     localStorage.setItem('bloom_custom_species', JSON.stringify(existing));
-    
-    // Also save as the active direct-transfer species
     localStorage.setItem('bloom_active_species', JSON.stringify(species));
   } catch (e) {
     console.warn("Storage error:", e);
   }
 
-  // Also trigger file download as backup
   try {
     const blob = new Blob([JSON.stringify(species, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -247,7 +246,6 @@ export function exportAndLaunchSimulation() {
     URL.revokeObjectURL(url);
   } catch (e) {}
 
-  // Automatically navigate right into the living simulation
   window.location.href = "simulation-demo.html?autoplay=true";
 }
 
