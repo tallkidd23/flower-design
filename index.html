@@ -5,105 +5,213 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flower Design Studio</title>
     <style>
-        body { margin: 0; font-family: monospace; background: #000; color: #0f0; }
-        #controls { position: fixed; left: 0; top: 0; width: 380px; height: 100vh; overflow-y: auto; background: rgba(0,0,0,0.9); padding: 10px; box-sizing: border-box; font-size: 11px; }
-        #controls h2 { color: #ff69b4; margin: 10px 0; }
-        #controls h3 { color: #0ff; margin: 15px 0 5px; border-bottom: 1px solid #333; padding-bottom: 3px; }
-        #controls label { display: inline-block; width: 180px; margin: 3px 0; }
-        #controls input[type="range"] { width: 140px; }
-        #controls input[type="color"] { width: 50px; border: none; }
-        #controls input[type="checkbox"] { margin-right: 5px; }
-        #controls select { width: 145px; background: #111; color: #0f0; border: 1px solid #333; }
-        #controls button { margin: 5px 2px; padding: 5px 10px; background: #333; color: #0f0; border: 1px solid #0f0; cursor: pointer; }
-        #canvas-container { position: fixed; left: 380px; top: 0; width: calc(100% - 380px); height: 100vh; }
-        canvas { display: block; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #fff;
+        }
+        #controls { 
+            position: fixed; 
+            left: 0; 
+            top: 0; 
+            width: 33%; 
+            height: 100vh; 
+            overflow-y: auto; 
+            background: #000;
+            padding: 15px; 
+            box-sizing: border-box;
+            font-size: 11px;
+            border-right: 1px solid #333;
+        }
+        #controls h2 { 
+            color: #fff; 
+            margin: 15px 0 10px;
+            font-size: 14px;
+            font-weight: normal;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        #controls h3 { 
+            color: #888;
+            margin: 20px 0 8px; 
+            font-size: 10px;
+            font-weight: normal;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #222;
+            padding-bottom: 4px;
+        }
+        #controls label { 
+            display: inline-block; 
+            width: 160px; 
+            margin: 4px 0;
+            color: #aaa;
+        }
+        #controls input[type="range"] { 
+            width: 120px; 
+            background: #111;
+            height: 3px;
+            -webkit-appearance: none;
+        }
+        #controls input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            cursor: pointer;
+        }
+        #controls input[type="color"] { 
+            width: 40px; 
+            height: 20px;
+            border: 1px solid #333; 
+            background: #000;
+            padding: 0;
+        }
+        #controls input[type="checkbox"] { 
+            margin-right: 5px;
+        }
+        #controls select { 
+            width: 125px; 
+            background: #000; 
+            color: #fff; 
+            border: 1px solid #333;
+            padding: 2px 5px;
+            font-family: inherit;
+            font-size: 10px;
+        }
+        #controls button { 
+            margin: 4px 3px; 
+            padding: 6px 12px; 
+            background: #000; 
+            color: #fff; 
+            border: 1px solid #444; 
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        #controls button:hover {
+            border-color: #fff;
+        }
+        #controls .value {
+            display: inline-block;
+            width: 30px;
+            text-align: right;
+            color: #666;
+        }
+        #canvas-container { 
+            position: fixed; 
+            left: 33%; 
+            top: 0; 
+            width: 67%; 
+            height: 100vh;
+            background: #000;
+        }
+        canvas { 
+            display: block; 
+            width: 100%;
+            height: 100%;
+        }
+        #controls::-webkit-scrollbar {
+            width: 4px;
+        }
+        #controls::-webkit-scrollbar-track {
+            background: #000;
+        }
+        #controls::-webkit-scrollbar-thumb {
+            background: #333;
+        }
     </style>
 </head>
 <body>
     <div id="controls">
-        <h2>🌸 FLOWER DESIGN STUDIO</h2>
+        <h2>Flower Design Studio</h2>
         
-        <h3>PETAL GEOMETRY</h3>
-        <label>Petal Count</label><input type="range" id="petalCount" min="3" max="55" value="8"><span id="petalCountValue">8</span><br>
-        <label>Petal Length</label><input type="range" id="petalLength" min="20" max="200" value="80"><span id="petalLengthValue">80</span><br>
-        <label>Petal Width</label><input type="range" id="petalWidth" min="5" max="100" value="40"><span id="petalWidthValue">40</span><br>
-        <label>Petal Taper</label><input type="range" id="petalTaper" min="0" max="100" value="50"><span id="petalTaperValue">50</span><br>
-        <label>Petal Curl</label><input type="range" id="petalCurl" min="-100" max="100" value="0"><span id="petalCurlValue">0</span><br>
-        <label>Petal Twist</label><input type="range" id="petalTwist" min="-100" max="100" value="0"><span id="petalTwistValue">0</span><br>
+        <h3>Petal Geometry</h3>
+        <label>Petal Count</label><input type="range" id="petalCount" min="3" max="55" value="8"><span id="petalCountValue" class="value">8</span><br>
+        <label>Petal Length</label><input type="range" id="petalLength" min="20" max="200" value="80"><span id="petalLengthValue" class="value">80</span><br>
+        <label>Petal Width</label><input type="range" id="petalWidth" min="5" max="100" value="40"><span id="petalWidthValue" class="value">40</span><br>
+        <label>Petal Taper</label><input type="range" id="petalTaper" min="0" max="100" value="50"><span id="petalTaperValue" class="value">50</span><br>
+        <label>Petal Curl</label><input type="range" id="petalCurl" min="-100" max="100" value="0"><span id="petalCurlValue" class="value">0</span><br>
+        <label>Petal Twist</label><input type="range" id="petalTwist" min="-100" max="100" value="0"><span id="petalTwistValue" class="value">0</span><br>
         <label>Phyllotaxis</label>
         <select id="phyllotaxisMode">
-            <option value="spiral">Spiral (137.5&deg;)</option>
+            <option value="spiral">Spiral</option>
             <option value="whorled">Whorled</option>
             <option value="opposite">Opposite</option>
             <option value="alternate">Alternate</option>
             <option value="decussate">Decussate</option>
         </select><br>
         
-        <h3>STEM PROPERTIES</h3>
-        <label>Stem Length</label><input type="range" id="stemLength" min="50" max="500" value="200"><span id="stemLengthValue">200</span><br>
-        <label>Stem Width</label><input type="range" id="stemWidth" min="1" max="30" value="8"><span id="stemWidthValue">8</span><br>
-        <label>Stem Taper</label><input type="range" id="stemTaper" min="0" max="100" value="60"><span id="stemTaperValue">60</span><br>
-        <label>Stem Curvature</label><input type="range" id="stemCurvature" min="0" max="100" value="30"><span id="stemCurvatureValue">30</span><br>
-        <label>Stem Segments</label><input type="range" id="stemSegments" min="3" max="20" value="10"><span id="stemSegmentsValue">10</span><br>
-        <label>Internode Length</label><input type="range" id="internodeLength" min="10" max="100" value="40"><span id="internodeLengthValue">40</span><br>
+        <h3>Stem Properties</h3>
+        <label>Stem Length</label><input type="range" id="stemLength" min="50" max="500" value="200"><span id="stemLengthValue" class="value">200</span><br>
+        <label>Stem Width</label><input type="range" id="stemWidth" min="1" max="30" value="8"><span id="stemWidthValue" class="value">8</span><br>
+        <label>Stem Taper</label><input type="range" id="stemTaper" min="0" max="100" value="60"><span id="stemTaperValue" class="value">60</span><br>
+        <label>Stem Curvature</label><input type="range" id="stemCurvature" min="0" max="100" value="30"><span id="stemCurvatureValue" class="value">30</span><br>
+        <label>Stem Segments</label><input type="range" id="stemSegments" min="3" max="20" value="10"><span id="stemSegmentsValue" class="value">10</span><br>
+        <label>Internode Length</label><input type="range" id="internodeLength" min="10" max="100" value="40"><span id="internodeLengthValue" class="value">40</span><br>
         
-        <h3>LEAF PARAMETERS</h3>
-        <label>Leaf Count</label><input type="range" id="leafCount" min="0" max="20" value="5"><span id="leafCountValue">5</span><br>
-        <label>Leaf Length</label><input type="range" id="leafLength" min="10" max="150" value="40"><span id="leafLengthValue">40</span><br>
-        <label>Leaf Width</label><input type="range" id="leafWidth" min="5" max="80" value="20"><span id="leafWidthValue">20</span><br>
+        <h3>Leaf Parameters</h3>
+        <label>Leaf Count</label><input type="range" id="leafCount" min="0" max="20" value="5"><span id="leafCountValue" class="value">5</span><br>
+        <label>Leaf Length</label><input type="range" id="leafLength" min="10" max="150" value="40"><span id="leafLengthValue" class="value">40</span><br>
+        <label>Leaf Width</label><input type="range" id="leafWidth" min="5" max="80" value="20"><span id="leafWidthValue" class="value">20</span><br>
         <label>Leaf Phyllotaxy</label>
         <select id="leafPhyllotaxy">
             <option value="alternate">Alternate</option>
             <option value="opposite">Opposite</option>
             <option value="whorled">Whorled</option>
-            <option value="basal">Basal Rosette</option>
+            <option value="basal">Basal</option>
         </select><br>
-        <label>Leaf Angle</label><input type="range" id="leafAngle" min="0" max="90" value="45"><span id="leafAngleValue">45</span><br>
-        <label>Petiole Length</label><input type="range" id="petioleLength" min="0" max="50" value="10"><span id="petioleLengthValue">10</span><br>
+        <label>Leaf Angle</label><input type="range" id="leafAngle" min="0" max="90" value="45"><span id="leafAngleValue" class="value">45</span><br>
+        <label>Petiole Length</label><input type="range" id="petioleLength" min="0" max="50" value="10"><span id="petioleLengthValue" class="value">10</span><br>
         
-        <h3>COLOR CONTROLS</h3>
-        <label>Petal Base Color</label><input type="color" id="petalColor" value="#FF69B4"><br>
-        <label>Petal Tip Color</label><input type="color" id="petalTipColor" value="#FF1493"><br>
-        <label>Petal Vein Color</label><input type="color" id="petalVeinColor" value="#FF69B4"><br>
-        <label>Center Color</label><input type="color" id="centerColor" value="#FFD700"><br>
-        <label>Stem Color</label><input type="color" id="stemColor" value="#228B22"><br>
+        <h3>Color Controls</h3>
+        <label>Petal Base</label><input type="color" id="petalColor" value="#FF69B4"><br>
+        <label>Petal Tip</label><input type="color" id="petalTipColor" value="#FF1493"><br>
+        <label>Petal Vein</label><input type="color" id="petalVeinColor" value="#FF69B4"><br>
+        <label>Center</label><input type="color" id="centerColor" value="#FFD700"><br>
+        <label>Stem Base</label><input type="color" id="stemColor" value="#228B22"><br>
         <label>Stem Accent</label><input type="color" id="stemAccent" value="#006400"><br>
-        <label>Leaf Color</label><input type="color" id="leafColor" value="#32CD32"><br>
-        <label>Leaf Vein Color</label><input type="color" id="leafVeinColor" value="#228B22"><br>
+        <label>Leaf Base</label><input type="color" id="leafColor" value="#32CD32"><br>
+        <label>Leaf Vein</label><input type="color" id="leafVeinColor" value="#228B22"><br>
         
-        <h3>ADVANCED FEATURES</h3>
-        <label><input type="checkbox" id="showThorns"> Add Thorns</label><br>
-        <label>Thorn Density</label><input type="range" id="thornDensity" min="0" max="100" value="50"><span id="thornDensityValue">50</span><br>
-        <label>Thorn Length</label><input type="range" id="thornLength" min="1" max="20" value="8"><span id="thornLengthValue">8</span><br>
-        <label><input type="checkbox" id="showTrichomes"> Add Trichomes</label><br>
-        <label>Trichome Density</label><input type="range" id="trichomeDensity" min="0" max="100" value="30"><span id="trichomeDensityValue">30</span><br>
-        <label><input type="checkbox" id="carnivorous"> Carnivorous Mode</label><br>
-        <label>Pitcher Count</label><input type="range" id="pitcherCount" min="0" max="10" value="3"><span id="pitcherCountValue">3</span><br>
-        <label><input type="checkbox" id="showFragrance"> Visualize Fragrance</label><br>
-        <label><input type="checkbox" id="showNectar"> Show Nectar Guides</label><br>
+        <h3>Advanced Features</h3>
+        <label><input type="checkbox" id="showThorns"> Thorns</label><br>
+        <label>Thorn Density</label><input type="range" id="thornDensity" min="0" max="100" value="50"><span id="thornDensityValue" class="value">50</span><br>
+        <label>Thorn Length</label><input type="range" id="thornLength" min="1" max="20" value="8"><span id="thornLengthValue" class="value">8</span><br>
+        <label><input type="checkbox" id="showTrichomes"> Trichomes</label><br>
+        <label>Trichome Density</label><input type="range" id="trichomeDensity" min="0" max="100" value="30"><span id="trichomeDensityValue" class="value">30</span><br>
+        <label><input type="checkbox" id="carnivorous"> Carnivorous</label><br>
+        <label>Pitcher Count</label><input type="range" id="pitcherCount" min="0" max="10" value="3"><span id="pitcherCountValue" class="value">3</span><br>
+        <label><input type="checkbox" id="showFragrance"> Fragrance</label><br>
+        <label><input type="checkbox" id="showNectar"> Nectar</label><br>
         
-        <h3>TEXTURE & SURFACE</h3>
-        <label>Petal Roughness</label><input type="range" id="petalRoughness" min="0" max="100" value="30"><span id="petalRoughnessValue">30</span><br>
-        <label>Petal Metallic</label><input type="range" id="petalMetallic" min="0" max="100" value="10"><span id="petalMetallicValue">10</span><br>
-        <label>Stem Roughness</label><input type="range" id="stemRoughness" min="0" max="100" value="70"><span id="stemRoughnessValue">70</span><br>
-        <label>Leaf Roughness</label><input type="range" id="leafRoughness" min="0" max="100" value="60"><span id="leafRoughnessValue">60</span><br>
+        <h3>Texture</h3>
+        <label>Petal Roughness</label><input type="range" id="petalRoughness" min="0" max="100" value="30"><span id="petalRoughnessValue" class="value">30</span><br>
+        <label>Petal Metallic</label><input type="range" id="petalMetallic" min="0" max="100" value="10"><span id="petalMetallicValue" class="value">10</span><br>
+        <label>Stem Roughness</label><input type="range" id="stemRoughness" min="0" max="100" value="70"><span id="stemRoughnessValue" class="value">70</span><br>
+        <label>Leaf Roughness</label><input type="range" id="leafRoughness" min="0" max="100" value="60"><span id="leafRoughnessValue" class="value">60</span><br>
         
-        <h3>RENDERING</h3>
+        <h3>Rendering</h3>
         <label>Shadow Quality</label>
         <select id="shadowQuality">
             <option value="low">Low</option>
-            <option value="medium" selected>Medium</option>
+            <option value="medium">Medium</option>
             <option value="high">High</option>
         </select><br>
         <label><input type="checkbox" id="autoRotate" checked> Auto Rotate</label><br>
-        <label>Rotation Speed</label><input type="range" id="rotationSpeed" min="0" max="100" value="20"><span id="rotationSpeedValue">20</span><br>
+        <label>Rotation Speed</label><input type="range" id="rotationSpeed" min="0" max="100" value="20"><span id="rotationSpeedValue" class="value">20</span><br>
         
-        <h3>ACTIONS</h3>
-        <button id="randomizeBtn">🎲 Randomize</button>
-        <button id="saveBtn">💾 Save PNG</button>
-        <button id="exportBtn">📤 Export JSON</button>
-        <button id="simulateBtn">🐝 Simulation</button>
-        <button id="resetBtn">🔄 Reset</button>
+        <h3>Actions</h3>
+        <button id="randomizeBtn">Randomize</button>
+        <button id="saveBtn">Save</button>
+        <button id="exportBtn">Export</button>
+        <button id="simulateBtn">Simulate</button>
+        <button id="resetBtn">Reset</button>
     </div>
     
     <div id="canvas-container"></div>
